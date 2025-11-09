@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Очистка БД</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0f1216;
+            color: #fff;
+            padding: 40px;
+            text-align: center;
+        }
+        button {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #dc2626;
+        }
+        .success {
+            background: #22c55e;
+        }
+        .success:hover {
+            background: #16a34a;
+        }
+        pre {
+            background: #1d232b;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: left;
+            max-width: 600px;
+            margin: 20px auto;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗑️ Очистка баз данных</h1>
+    <p>Удаление всех пользователей кроме Max</p>
+    
+    <button onclick="clearDatabases()">Очистить базы данных</button>
+    <button class="success" onclick="location.href='shop.html'">Перейти в магазин</button>
+    <button class="success" onclick="location.href='bank.html'">Перейти в банк</button>
+    
+    <div id="result"></div>
+
+    <script>
+        function clearDatabases() {
+            // Clear shop users - keep only max
+            const shopUsers = [
+                { id: 1, username: 'max', password: '12345', balance: 1000000, role: 'admin' }
+            ];
+            localStorage.setItem('mtshop_users', JSON.stringify(shopUsers));
+
+            // Clear bank users - keep only Max
+            const bankUsers = [
+                { username: 'Max', password: '12345', isAdmin: true, balance: 0, online: false, deleted: false }
+            ];
+            localStorage.setItem('msbank_users_v11', JSON.stringify(bankUsers));
+
+            // Clear all other data
+            localStorage.removeItem('mtshop_session');
+            localStorage.removeItem('mtshop_products');
+            localStorage.removeItem('mtshop_stores');
+            localStorage.removeItem('mtshop_withdrawals');
+            localStorage.removeItem('mtshop_notifications');
+            
+            localStorage.removeItem('msbank_session_v11');
+            localStorage.removeItem('msbank_history_v11');
+            localStorage.removeItem('msbank_notes_v11');
+
+            // Re-initialize products for max's store
+            const stores = [{
+                id: 1,
+                ownerId: 1,
+                name: 'MT Shop',
+                soldCount: 0,
+                revenue: 0,
+                withdrawalBalance: 0
+            }];
+            localStorage.setItem('mtshop_stores', JSON.stringify(stores));
+
+            const products = [
+                { id: 1, storeId: 1, title: 'Смартфон Premium', description: 'Флагманский смартфон', price: 2500, stock: 5, category: 'electronics', icon: '📱', soldCount: 0 },
+                { id: 2, storeId: 1, title: 'Ноутбук Pro', description: 'Мощный ноутбук', price: 5000, stock: 3, category: 'electronics', icon: '💻', soldCount: 0 },
+                { id: 3, storeId: 1, title: 'Наушники Wireless', description: 'Беспроводные наушники', price: 800, stock: 10, category: 'electronics', icon: '🎧', soldCount: 0 },
+                { id: 4, storeId: 1, title: 'Футболка Classic', description: 'Удобная футболка', price: 150, stock: 20, category: 'clothing', icon: '👕', soldCount: 0 },
+                { id: 5, storeId: 1, title: 'Джинсы Casual', description: 'Стильные джинсы', price: 350, stock: 15, category: 'clothing', icon: '👖', soldCount: 0 },
+                { id: 6, storeId: 1, title: 'Кроссовки Sport', description: 'Легкие кроссовки', price: 600, stock: 8, category: 'sport', icon: '👟', soldCount: 0 },
+                { id: 7, storeId: 1, title: 'Лампа настольная', description: 'LED лампа', price: 200, stock: 12, category: 'home', icon: '💡', soldCount: 0 },
+                { id: 8, storeId: 1, title: 'Чайник Smart', description: 'Умный чайник', price: 400, stock: 7, category: 'home', icon: '☕', soldCount: 0 }
+            ];
+            localStorage.setItem('mtshop_products', JSON.stringify(products));
+
+            document.getElementById('result').innerHTML = `
+                <pre>
+✅ Базы данных очищены!
+
+Магазин (MT Shop):
+- Пользователи: только max
+- Магазины: MT Shop (принадлежит max)
+- Товары: 8 начальных товаров
+
+Банк (MTBank):
+- Пользователи: только Max
+- История: очищена
+- Уведомления: очищены
+
+Можете перейти в магазин или банк.
+                </pre>
+            `;
+        }
+    </script>
+</body>
+</html>

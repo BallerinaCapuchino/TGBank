@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>MyInfo — Telegram Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root{ --bg:#0f1216; --panel:#171b21; --panel-2:#1d232b; --text:#e9eef5; --muted:#a5b1c2; --blue:#3aa0ff; --blue-2:#2589e6; --green:#35c46a; --red:#ff4d4f; --amber:#f5a524; --radius:18px; --shadow:0 20px 40px rgba(0,0,0,.35), 0 6px 16px rgba(0,0,0,.35); }
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial; background: radial-gradient(1200px 800px at 80% -10%, rgba(58,160,255,.08), transparent 50%), radial-gradient(900px 600px at -10% 110%, rgba(53,196,106,.07), transparent 50%), var(--bg); color:var(--text); }
+    .wrap{ max-width:1200px; margin:0 auto; padding:24px }
+    .hidden{ display:none !important }
+    .card{ background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)), var(--panel); border:1px solid rgba(255,255,255,.06); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .panel{ padding:20px }
+    .grid{ display:grid; grid-template-columns: 1.4fr 1fr; gap:20px }
+    .grid-3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px }
+    .grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap:20px }
+
+    .btn{ background: var(--blue); color:#fff; border:0; border-radius:14px; padding:12px 16px; font-weight:700; box-shadow: 0 8px 20px rgba(58,160,255,.25); cursor:pointer; transition:.15s ease; }
+    .btn:hover{ background: var(--blue-2); transform: translateY(-1px) }
+    .btn:active{ transform: translateY(0) }
+    .btn.small{ padding:8px 12px; font-weight:600; border-radius:12px }
+    .btn.ghost{ background: transparent; border:1px solid rgba(255,255,255,.1) }
+    .btn.gray{ background:#2a3039 }
+    .btn.red{ background:var(--red) }
+    .btn.green{ background:var(--green) }
+    .btn.block{ width:100% }
+
+    .input, .select, .textarea{ width:100%; max-width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.08); outline:none; background: var(--panel-2); color:var(--text); box-sizing: border-box; }
+    .textarea{ min-height:120px; resize:vertical }
+    .input:focus, .textarea:focus{ border-color: rgba(58,160,255,.6); box-shadow: 0 0 0 4px rgba(58,160,255,.15) }
+    .muted{ color:var(--muted) }
+    .pill{ display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; font-size:12px; background:#222833; border:1px solid rgba(255,255,255,.06) }
+    .badge{ padding:4px 8px; border-radius:10px; border:1px solid rgba(255,255,255,.08); font-size:12px; color:var(--muted) }
+    .chips{ display:flex; gap:10px; align-items:center }
+
+    table{ width:100%; border-collapse: collapse }
+    th, td{ padding:10px 8px; border-bottom:1px solid rgba(255,255,255,.06); text-align:left; font-size:14px }
+    th{ color:var(--muted); font-weight:600 }
+
+    .topbar{ position: sticky; top:0; z-index:10; backdrop-filter: blur(8px); background: rgba(15,18,22,.65); border-bottom:1px solid rgba(255,255,255,.06) }
+    .topbar-inner{ max-width:1200px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:12px }
+    .brand{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px }
+    .logo{ width:28px; height:28px; border-radius:7px; background: linear-gradient(135deg, #2589e6, #3aa0ff); box-shadow: inset 0 0 24px rgba(255,255,255,.25), 0 4px 16px rgba(58,160,255,.4)}
+    .grow{ flex:1 }
+
+    .section-title{ display:flex; align-items:center; justify-content:space-between; gap:12px }
+
+    .secure{ filter: blur(6px); transition:.15s ease }
+    .secure.reveal{ filter:none }
+
+    .thumbs{ display:flex; gap:10px; flex-wrap:wrap }
+    .thumb{ width:88px; height:66px; border-radius:10px; border:1px solid rgba(255,255,255,.08); background:#222833 center/cover no-repeat; position:relative }
+    .thumb button{ position:absolute; right:4px; top:4px; border:0; border-radius:8px; padding:4px 6px; cursor:pointer; background:rgba(0,0,0,.6); color:#fff; font-size:12px }
+
+    .modal-backdrop{ position: fixed; inset:0; background: rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:50 }
+    .modal{ width:min(560px, 94%); background: var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:18px; box-shadow: var(--shadow); transform: translateY(10px) scale(.98); opacity:0; transition:.2s ease }
+    .modal.show{ transform: translateY(0) scale(1); opacity:1 }
+    .modal-backdrop.show{ display:flex }
+    .modal header{ padding:18px 20px; border-bottom:1px solid rgba(255,255,255,.06); font-weight:800 }
+    .modal main{ padding:20px; display:flex; flex-direction:column; gap:12px }
+    .modal footer{ padding:16px 20px; display:flex; gap:12px; justify-content:flex-end; border-top:1px solid rgba(255,255,255,.06) }
+
+    #toasts{ position: fixed; right: 18px; bottom: 18px; display:flex; flex-direction:column; gap:10px; z-index:60 }
+    .toast{ background: var(--panel); border:1px solid rgba(255,255,255,.08); border-left:4px solid var(--blue); padding:12px 14px; border-radius:12px; box-shadow: var(--shadow); min-width: 260px; animation: slideIn .35s ease both }
+    .toast.ok{ border-left-color: var(--green) }
+    .toast.warn{ border-left-color: var(--amber) }
+    .toast.err{ border-left-color: var(--red) }
+    @keyframes slideIn{ from{ transform: translateY(12px); opacity:0 } to{ transform: translateY(0); opacity:1 } }
+
+    /* iOS-style Exit Indicator */
+    .ios-exit-indicator {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 5px;
+      background: rgba(255, 255, 255, .3);
+      border-radius: 0 0 8px 8px;
+      z-index: 100;
+      cursor: pointer;
+      transition: all .3s ease;
+    }
+    .ios-exit-indicator:hover {
+      height: 8px;
+      background: rgba(255, 255, 255, .5);
+    }
+    .ios-exit-indicator.dragging {
+      height: 30px;
+      background: linear-gradient(180deg, rgba(255, 77, 79, .7), rgba(255, 77, 79, .4));
+    }
+
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr } .grid-2{ grid-template-columns:1fr } .grid-3{ grid-template-columns:1fr } .topbar-inner{ padding:12px 16px } }
+  </style>
+</head>
+<body>
+  <!-- iOS-style Exit Indicator -->
+  <div class="ios-exit-indicator hidden" id="exitIndicator"></div>
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><div class="logo"></div><div>MyInfo — Моя информация</div></div>
+      <div class="grow"></div>
+      <div id="devicePill" class="pill"></div>
+      <div class="pill"><span id="whoami">—</span></div>
+      <!-- ВЫХОД УБРАН ПО ТЗ -->
+    </div>
+  </div>
+
+  <!-- AUTH -->
+  <div class="wrap" id="authScreen">
+    <div class="card panel">
+      <div style="margin-bottom: 16px;">
+        <button class="btn gray small" onclick="window.location.href='index.html'" style="width: auto;">← Рабочий стол</button>
+      </div>
+      <h2 style="margin:0 0 8px">Вход / Регистрация</h2>
+      <p class="muted" style="margin:0 0 16px">Тест-аккаунт: <b>Max</b> / <b>12345</b>. При входе обязательно указывайте <b>СВОЁ</b> имя.</p>
+      <div class="grid-2">
+        <div class="card panel">
+          <h3 style="margin-top:0">Вход</h3>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <input id="loginUser" class="input" placeholder="Аккаунт (логин)" />
+            <input id="loginPass" class="input" placeholder="Пароль" type="password" />
+            <input id="loginRealName" class="input" placeholder="Ваше имя (кто сейчас пользуется) — писать СВОЁ" />
+            <button id="loginBtn" class="btn">Войти</button>
+          </div>
+        </div>
+        <div class="card panel" id="registerForm">
+          <h3 style="margin-top:0">Регистрация</h3>
+          <div class="grid-3">
+            <input id="regUser" class="input" placeholder="Уникальное имя" />
+            <input id="regPass" class="input" placeholder="Пароль" type="password" />
+            <input id="regPhone" class="input" placeholder="Телефон (только цифры)" />
+          </div>
+          <div style="margin-top:10px; display:flex; gap:10px">
+            <button id="regBtn" class="btn">Создать</button>
+          </div>
+          <p class="muted">Имя уникально. Телефон: только цифры 10–15. <b>Паспорт сгенерируется автоматически</b>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- USER VIEW -->
+  <div class="wrap hidden" id="userView">
+    <div class="grid">
+      <div class="card panel">
+        <div class="section-title">
+          <h3 style="margin:0">Паспорт</h3>
+          <div class="chips">
+            <div class="pill">Номер назначается автоматически</div>
+            <button id="toggleSecure" class="btn gray small">Показать номер</button>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:10px">
+          <div>
+            <label class="muted">Серия и номер (readonly)</label>
+            <input id="passNum" class="input secure" placeholder="1234 567890" readonly />
+          </div>
+          <div>
+            <label class="muted">Кем выдан / Дата</label>
+            <input id="passIssuer" class="input" placeholder="ОВД / 01.01.2020" />
+          </div>
+          <div>
+            <label class="muted">ФИО (как в пасп.)</label>
+            <input id="passFio" class="input" placeholder="Иванов Иван Иванович" />
+          </div>
+          <div>
+            <label class="muted">Дата рождения</label>
+            <input id="passDob" class="input" placeholder="01.01.2000" />
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <label class="muted">Фото/сканы паспорта</label>
+          <div class="thumbs" id="passThumbs"></div>
+          <div style="display:flex; gap:10px; margin-top:8px">
+            <input type="file" id="passFiles" accept="image/*" multiple class="input" />
+            <button id="savePass" class="btn">Сохранить</button>
+          </div>
+        </div>
+        <div class="muted" style="margin-top:8px">Последнее сохранение: <span id="passUpdated">—</span></div>
+      </div>
+
+      <div class="card panel">
+        <div class="section-title">
+          <h3 style="margin:0">Контакты</h3>
+          <div class="pill">Чужой телефон (для связи)</div>
+        </div>
+        <div class="grid-2" style="margin-top:10px">
+          <div>
+            <label class="muted">Контактный телефон (чужой)</label>
+            <input id="contactPhone" class="input" placeholder="Только цифры 10–15" />
+          </div>
+          <div>
+            <label class="muted">ФИО владельца телефона</label>
+            <input id="contactName" class="input" placeholder="Кто владелец номера" />
+          </div>
+        </div>
+        <div style="margin-top:10px; display:flex; gap:10px"><button id="saveContact" class="btn">Сохранить</button><button id="copyContact" class="btn gray">Копировать</button></div>
+        <div class="muted" style="margin-top:8px">Последнее сохранение: <span id="contactUpdated">—</span></div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:20px">
+      <div class="card panel">
+        <div class="section-title"><h3 style="margin:0">Жильё</h3><div class="pill">Адрес и документы</div></div>
+        <div class="grid-2" style="margin-top:10px">
+          <div><label class="muted">Адрес проживания</label><input id="homeAddr" class="input" placeholder="Город, улица, дом, кв." /></div>
+          <div><label class="muted">Тип жилья</label><select id="homeType" class="select"><option value="own">Собственность</option><option value="rent">Аренда</option><option value="family">Семейное</option><option value="other">Другое</option></select></div>
+          <div><label class="muted">Комментарий</label><input id="homeNote" class="input" placeholder="Этаж, подъезд, примечания" /></div>
+          <div>
+            <label class="muted">Сканы документов (жил.)</label>
+            <div class="thumbs" id="homeThumbs"></div>
+            <input type="file" id="homeFiles" accept="image/*" multiple class="input" style="margin-top:8px" />
+          </div>
+        </div>
+        <div style="margin-top:10px"><button id="saveHome" class="btn">Сохранить</button></div>
+        <div class="muted" style="margin-top:8px">Последнее сохранение: <span id="homeUpdated">—</span></div>
+      </div>
+
+      <div class="card panel">
+        <div class="section-title"><h3 style="margin:0">Регистрация</h3><div class="pill">Постоянная/временная</div></div>
+        <div class="grid-2" style="margin-top:10px">
+          <div><label class="muted">Тип</label><select id="regType" class="select"><option value="perm">Постоянная</option><option value="temp">Временная</option></select></div>
+          <div><label class="muted">Адрес регистрации</label><input id="regAddr" class="input" placeholder="По паспорту/временная" /></div>
+          <div><label class="muted">Срок (если временная)</label><input id="regTerm" class="input" placeholder="с 01.01.2026 по 01.07.2026" /></div>
+          <div>
+            <label class="muted">Сканы регистрации</label>
+            <div class="thumbs" id="regThumbs"></div>
+            <input type="file" id="regFiles" accept="image/*" multiple class="input" style="margin-top:8px" />
+          </div>
+        </div>
+        <div style="margin-top:10px"><button id="saveReg" class="btn">Сохранить</button></div>
+        <div class="muted" style="margin-top:8px">Последнее сохранение: <span id="regUpdated">—</span></div>
+      </div>
+    </div>
+
+    <div class="card panel" style="margin-top:20px">
+      <div class="section-title"><h3 style="margin:0 0 10px">Кредиты</h3><div class="pill">Выдаёт только администратор</div></div>
+      <div class="muted" style="margin-top:8px">Добавление/изменение кредитов доступно администратору в админ‑панели. Здесь только просмотр.</div>
+      <table style="margin-top:10px">
+        <thead><tr><th>Кредит</th><th>Сумма</th><th>Ставка</th><th>Срок</th><th>Платёж/мес</th><th>Статус</th></tr></thead>
+        <tbody id="creditsTable"></tbody>
+      </table>
+    </div>
+
+    <div class="grid" style="margin-top:20px">
+      <div class="card panel">
+        <h3 style="margin:0 0 10px">Экспорт/Импорт</h3>
+        <div class="row">
+          <button id="exportJson" class="btn gray">Экспорт JSON</button>
+          <input type="file" id="importJson" accept="application/json" class="input" />
+        </div>
+      </div>
+      <div class="card panel">
+        <h3 style="margin:0 0 10px">Действия</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button id="changePassword" class="btn">Сменить пароль</button>
+          <button id="printBtn" class="btn gray">Печать сводки</button>
+          <button id="deleteMe" class="btn red">Удалить аккаунт</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card panel" style="margin-top:20px">
+      <h3 style="margin:0 0 10px">Журнал изменений</h3>
+      <table>
+        <thead><tr><th>Время</th><th>Секция</th><th>Действие</th></tr></thead>
+        <tbody id="auditTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ADMIN VIEW -->
+  <div class="wrap hidden" id="adminView">
+    <div class="card panel">
+      <div class="section-title"><h3 style="margin:0">Пользователи</h3><div class="pill">Админ-панель</div></div>
+      <div id="usersList" style="display:flex; flex-direction:column; gap:10px; margin-top:10px"></div>
+    </div>
+
+    <div class="card panel" style="margin-top:20px">
+      <h3 style="margin:0 0 10px">Резервные копии</h3>
+      <div class="row">
+        <button id="adminExportAll" class="btn gray">Экспорт всех пользователей</button>
+        <input type="file" id="adminImportAll" accept="application/json" class="input" />
+      </div>
+    </div>
+
+    <div class="card panel" style="margin-top:20px">
+      <div class="section-title"><h3 style="margin:0">Кредиты (админ)</h3><div class="pill">Выдача и управление</div></div>
+      <div class="muted">Нажми у нужного пользователя: «Кредиты» — список и управление; «Выдать кредит» — оформить новый.</div>
+    </div>
+  </div>
+
+  <!-- Modal & Toasts -->
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div class="modal" id="modal">
+      <header id="modalTitle">Подтверждение</header>
+      <main id="modalBody"></main>
+      <footer>
+        <button class="btn ghost" id="modalCancel">Отмена</button>
+        <button class="btn" id="modalOk">OK</button>
+      </footer>
+    </div>
+  </div>
+  <div id="toasts"></div>
+
+  <script>
+    // Telegram Web App initialization
+    const tg = window.Telegram?.WebApp;
+    let tgUser = null;
+    
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      tg.enableClosingConfirmation();
+      
+      // Get Telegram user
+      const initData = tg.initDataUnsafe;
+      if (initData?.user) {
+        tgUser = initData.user;
+        localStorage.setItem('tg_user', JSON.stringify(tgUser));
+      } else {
+        const stored = localStorage.getItem('tg_user');
+        if (stored) tgUser = JSON.parse(stored);
+      }
+      
+      // Setup back button
+      tg.BackButton.show();
+      tg.BackButton.onClick(() => {
+        window.location.href = 'index.html';
+      });
+      
+      // Apply theme
+      if (tg.themeParams.bg_color) {
+        document.documentElement.style.setProperty('--bg', tg.themeParams.bg_color);
+        document.documentElement.style.setProperty('--panel', tg.themeParams.secondary_bg_color || '#171b21');
+        document.documentElement.style.setProperty('--text', tg.themeParams.text_color || '#e9eef5');
+      }
+    }
+
+    /********************
+     * MyInfo — v1.4.1 (admin-only credits)
+     * Хранение: localStorage
+     ********************/
+    const LS_USERS   = 'myinfo_users_v1';
+    const LS_RECORDS = 'myinfo_records_v1';
+    const LS_AUDIT   = 'myinfo_audit_v1';
+    const LS_SESSION = 'myinfo_session_v1';
+
+    const $ = s=>document.querySelector(s);
+    const el = (t,c)=>{ const n=document.createElement(t); if(c) n.className=c; return n };
+    const fmt = n=> new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(n);
+    const nowISO = ()=> new Date().toISOString();
+    const niceTime = iso => new Date(iso).toLocaleString('ru-RU');
+
+    const load = (k,f)=>{ try{ const s=localStorage.getItem(k); return s? JSON.parse(s): f }catch(_){ return f } };
+    const save = (k,v)=> localStorage.setItem(k, JSON.stringify(v));
+
+    // accessors
+    const getUsers=()=>load(LS_USERS, []);
+    const setUsers=v=>save(LS_USERS, v);
+    const getRecs =()=>load(LS_RECORDS, {});
+    const setRecs =v=>save(LS_RECORDS, v);
+    const getAudit=()=>load(LS_AUDIT, []);
+    const setAudit=v=>save(LS_AUDIT, v);
+    const current = ()=> load(LS_SESSION, null);
+    const setCurrent = u => save(LS_SESSION, u);
+
+    // Ensure admin Max exists and is active
+    function ensureAdminMax(){
+      let users = getUsers();
+      if(!Array.isArray(users)) users = [];
+      const idx = users.findIndex(u=>u.username==='Max');
+      if(idx===-1){ users.unshift({ username:'Max', password:'12345', isAdmin:true, deleted:false }); }
+      else { users[idx] = { ...users[idx], password:'12345', isAdmin:true, deleted:false }; }
+      setUsers(users);
+    }
+
+    // Passport generator (unique across records)
+    function genPassport(){ const s=String(Math.floor(1000+Math.random()*9000)); const n=String(Math.floor(100000+Math.random()*900000)); return `${s} ${n}` }
+    function genPassportUnique(){ const recs=getRecs(); const used=new Set(Object.values(recs).map(r=>r?.passport?.number).filter(Boolean)); let p=''; let guard=0; do{ p=genPassport(); guard++; if(guard>5000) break } while(used.has(p)); return p }
+
+    // Seed
+    function seed(){
+      ensureAdminMax();
+      if(!load(LS_RECORDS)){
+        const rec={};
+        rec['Alice']={ passport:{ number:'', issuer:'', fio:'', dob:'', files:[], updatedAt:null }, contact:{ phone:'', name:'', updatedAt:null }, home:{ addr:'', type:'rent', note:'', files:[], updatedAt:null }, reg:{ type:'perm', addr:'', term:'', files:[], updatedAt:null }, credits:[] };
+        rec['Bob']  ={ passport:{ number:'', issuer:'', fio:'', dob:'', files:[], updatedAt:null }, contact:{ phone:'', name:'', updatedAt:null }, home:{ addr:'', type:'own',  note:'', files:[], updatedAt:null }, reg:{ type:'perm', addr:'', term:'', files:[], updatedAt:null }, credits:[] };
+        save(LS_RECORDS, rec);
+      }
+      if(!load(LS_AUDIT)) save(LS_AUDIT, []);
+    }
+
+    // AUDIT (safe if no session)
+    function logAudit(section, action, user){ const me=current(); const arr=getAudit(); arr.unshift({ id:crypto.randomUUID(), user:(user ?? me?.username ?? null), section, action, time:nowISO() }); setAudit(arr); if(me) renderAudit(); }
+
+    // Auth
+    function login(username, password, realName){
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+      const u=getUsers().find(x=>x.username.toLowerCase()===String(username||'').toLowerCase());
+      if(!u||u.deleted) return toast('Пользователь не найден','err');
+      if(String(u.password)!==String(password)) return toast('Неверный пароль','err');
+      if(!realName || !realName.trim()) return toast('Введите СВОЁ имя (кто сейчас пользуется)','err');
+      const sessionObj={ ...u, realName: realName.trim() };
+      setCurrent(sessionObj);
+      updateTop();
+      if(u.isAdmin){ showAdmin(); } else { ensureRecord(u.username); showUser(); }
+      toast('Вход выполнен','ok');
+    }
+    function logout(){
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+      localStorage.removeItem(LS_SESSION);
+      showAuth();
+    }
+    
+    // Auto-login with Telegram user
+    function tryTelegramAutoLogin() {
+      if (!tgUser) return false;
+      
+      const username = tgUser.username || `tg_${tgUser.id}`;
+      const realName = tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '');
+      let users = getUsers();
+      let u = users.find(x => x.username.toLowerCase() === username.toLowerCase());
+      
+      if (!u) {
+        // Auto-register Telegram user
+        const isAdmin = username === 'Max';
+        u = {
+          username: username,
+          password: String(tgUser.id),
+          isAdmin: isAdmin,
+          deleted: false,
+          telegramId: tgUser.id
+        };
+        users.push(u);
+        setUsers(users);
+        ensureRecord(username);
+        toast('Аккаунт создан через Telegram', 'ok');
+      }
+      
+      const sessionObj = { ...u, realName: realName };
+      setCurrent(sessionObj);
+      updateTop();
+      
+      if(u.isAdmin) {
+        showAdmin();
+      } else {
+        ensureRecord(u.username);
+        showUser();
+      }
+      
+      return true;
+    }
+
+    function ensureRecord(name){ const recs=getRecs(); if(!recs[name]){ recs[name]={ passport:{number: genPassportUnique(),issuer:'',fio:'',dob:'',files:[],updatedAt:null}, contact:{phone:'',name:'',updatedAt:null}, home:{addr:'',type:'rent',note:'',files:[],updatedAt:null}, reg:{type:'perm',addr:'',term:'',files:[],updatedAt:null}, credits:[] }; setRecs(recs); logAudit('Паспорт','Сгенерирован автоматически', name); } }
+    function register(username, password, phone){ username=(username||'').trim(); if(username.length<3) throw new Error('Имя не короче 3 символов'); if(getUsers().some(u=>u.username.toLowerCase()===username.toLowerCase())) throw new Error('Имя уже занято'); if(!/^\d{10,15}$/.test(String(phone||''))) throw new Error('Телефон: только цифры 10–15'); const users=getUsers(); users.push({username,password:String(password||''),isAdmin:false,deleted:false}); setUsers(users); ensureRecord(username); }
+
+    // UI helpers
+    const toast=(msg,type='ok',timeout=2600)=>{ const box=$('#toasts'); const t=el('div','toast '+type); t.textContent=msg; box.appendChild(t); setTimeout(()=>{ t.style.opacity=.0; t.style.transform='translateY(8px)'; setTimeout(()=>t.remove(), 350)}, timeout); };
+    const modal={ open({title='Подтверждение', bodyHTML='', okText='OK', okClass='', onOk=()=>{}}){ $('#modalTitle').textContent=title; $('#modalBody').innerHTML=bodyHTML; const ok=$('#modalOk'); ok.textContent=okText; ok.className='btn '+okClass; ok.disabled=false; const close=()=>{ $('#modalBackdrop').classList.remove('show'); $('#modal').classList.remove('show') }; $('#modalCancel').onclick=close; ok.onclick=async()=>{ ok.disabled=true; await onOk(); close(); }; $('#modalBackdrop').classList.add('show'); setTimeout(()=>$('#modal').classList.add('show'),0); } };
+    function updateSecureBtn(){ const btn=document.querySelector('#toggleSecure'); if(!btn) return; const shown=document.querySelector('#passNum')?.classList.contains('reveal'); btn.textContent = shown ? 'Скрыть номер' : 'Показать номер'; }
+
+    // Top/nav
+    function updateTop(){ const me=current(); const acc = me? (me.isAdmin? 'Max (админ)': me.username): '—'; const rn = me?.realName? ` · Сейчас: ${me.realName}`: ''; $('#whoami').textContent = acc + rn; $('#devicePill').textContent = (/Mobi|Android/i.test(navigator.userAgent)||window.innerWidth<860)? 'Мобильный':'Десктоп'; }
+    function showAuth(){ $('#authScreen').classList.remove('hidden'); $('#userView').classList.add('hidden'); $('#adminView').classList.add('hidden'); $('#exitIndicator').classList.add('hidden'); updateTop(); }
+    function showUser(){ $('#authScreen').classList.add('hidden'); $('#adminView').classList.add('hidden'); $('#userView').classList.remove('hidden'); $('#exitIndicator').classList.remove('hidden'); initExitIndicator(); updateTop(); loadUserForms(); updateSecureBtn(); renderCredits(); renderAudit(); }
+    function showAdmin(){ $('#authScreen').classList.add('hidden'); $('#userView').classList.add('hidden'); $('#adminView').classList.remove('hidden'); $('#exitIndicator').classList.remove('hidden'); initExitIndicator(); updateTop(); renderUsersList(); }
+
+    // iOS-style exit indicator
+    function initExitIndicator() {
+      const indicator = $('#exitIndicator');
+      if (!indicator) return;
+
+      let startY = 0;
+      let currentY = 0;
+      let dragging = false;
+
+      // Remove old listeners
+      const newIndicator = indicator.cloneNode(true);
+      indicator.parentNode.replaceChild(newIndicator, indicator);
+      const ind = $('#exitIndicator');
+
+      ind.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        startY = e.clientY;
+        currentY = 0;
+        ind.classList.add('dragging');
+        e.preventDefault();
+      });
+
+      document.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        currentY = Math.max(0, e.clientY - startY);
+        
+        if (currentY > 100) {
+          dragging = false;
+          ind.classList.remove('dragging');
+          logout();
+        }
+      });
+
+      document.addEventListener('pointerup', () => {
+        if (!dragging) return;
+        dragging = false;
+        ind.classList.remove('dragging');
+      });
+    }
+
+    // Validation
+    const isPhone = v=> /^\d{10,15}$/.test(String(v||''));
+
+    // User forms load/save
+    function rec(){ const me=current(); if(!me) return {}; const all=getRecs(); return all[me.username] || {}; }
+
+    function loadUserForms(){ const r=rec();
+      // passport
+      $('#passNum').value = r.passport?.number||''; $('#passIssuer').value=r.passport?.issuer||''; $('#passFio').value=r.passport?.fio||''; $('#passDob').value=r.passport?.dob||''; $('#passUpdated').textContent=r.passport?.updatedAt? niceTime(r.passport.updatedAt): '—'; renderThumbs('passThumbs', r.passport?.files||[], (i)=> removeFile('passport', i));
+      // contact
+      $('#contactPhone').value=r.contact?.phone||''; $('#contactName').value=r.contact?.name||''; $('#contactUpdated').textContent=r.contact?.updatedAt? niceTime(r.contact.updatedAt): '—';
+      // home
+      $('#homeAddr').value=r.home?.addr||''; $('#homeType').value=r.home?.type||'rent'; $('#homeNote').value=r.home?.note||''; $('#homeUpdated').textContent=r.home?.updatedAt? niceTime(r.home.updatedAt): '—'; renderThumbs('homeThumbs', r.home?.files||[], (i)=> removeFile('home', i));
+      // registration
+      $('#regType').value=r.reg?.type||'perm'; $('#regAddr').value=r.reg?.addr||''; $('#regTerm').value=r.reg?.term||''; $('#regUpdated').textContent=r.reg?.updatedAt? niceTime(r.reg.updatedAt): '—'; renderThumbs('regThumbs', r.reg?.files||[], (i)=> removeFile('reg', i));
+    }
+
+    function removeFile(section, idx){ const all=getRecs(); const me=current(); if(!me) return; const r=all[me.username]; if(!r) return; r[section].files = (r[section].files||[]).filter((_,i)=>i!==idx); r[section].updatedAt=nowISO(); setRecs(all); loadUserForms(); logAudit(section,'Удалён файл'); toast('Файл удалён','warn'); }
+
+    function renderThumbs(containerId, files, onDelete){ const box=$('#'+containerId); box.innerHTML=''; (files||[]).forEach((b64,i)=>{ const th=el('div','thumb'); th.style.backgroundImage=`url(${b64})`; const rm=el('button'); rm.textContent='×'; rm.onclick=()=> onDelete(i); th.appendChild(rm); box.appendChild(th); }); }
+
+    function readFiles(input, cb){ const files=[...input.files]; if(!files.length) return; let left=files.length; const out=[]; files.forEach(f=>{ const fr=new FileReader(); fr.onload=()=>{ out.push(fr.result); left--; if(!left) cb(out); }; fr.readAsDataURL(f); }); }
+
+    // Save handlers
+    function savePassport(){ const me=current(); if(!me) return; const all=getRecs(); const r=all[me.username]; r.passport.issuer=$('#passIssuer').value.trim(); r.passport.fio=$('#passFio').value.trim(); r.passport.dob=$('#passDob').value.trim(); r.passport.updatedAt=nowISO(); setRecs(all); logAudit('Паспорт','Сохранено'); loadUserForms(); toast('Паспорт сохранён','ok'); }
+    function saveContact(){ const me=current(); if(!me) return; const ph=$('#contactPhone').value.trim(); if(ph && !isPhone(ph)) return toast('Телефон: только цифры 10–15','err'); const all=getRecs(); const r=all[me.username]; r.contact.phone=ph; r.contact.name=$('#contactName').value.trim(); r.contact.updatedAt=nowISO(); setRecs(all); logAudit('Контакты','Сохранено'); loadUserForms(); toast('Контакты сохранены','ok'); }
+    function saveHome(){ const me=current(); if(!me) return; const all=getRecs(); const r=all[me.username]; r.home.addr=$('#homeAddr').value.trim(); r.home.type=$('#homeType').value; r.home.note=$('#homeNote').value.trim(); r.home.updatedAt=nowISO(); setRecs(all); logAudit('Жильё','Сохранено'); loadUserForms(); toast('Жильё сохранено','ok'); }
+    function saveReg(){ const me=current(); if(!me) return; const all=getRecs(); const r=all[me.username]; r.reg.type=$('#regType').value; r.reg.addr=$('#regAddr').value.trim(); r.reg.term=$('#regTerm').value.trim(); r.reg.updatedAt=nowISO(); setRecs(all); logAudit('Регистрация','Сохранено'); loadUserForms(); toast('Регистрация сохранена','ok'); }
+
+    // Credits — read-only for user
+    function monthlyPayment(sum, annual, months){ const S=+sum||0; const i=(+annual||0)/100/12; const n=+months||0; if(S<=0||n<=0) return 0; if(i<=0) return Math.round(S/n*100)/100; const m = i*Math.pow(1+i,n)/(Math.pow(1+i,n)-1); return Math.round(S*m*100)/100; }
+    function renderCredits(){ const body=$('#creditsTable'); body.innerHTML=''; const list=(rec().credits||[]); list.forEach(c=>{ const tr=el('tr'); tr.innerHTML=`<td>${c.title}</td><td>${fmt(c.amount)}</td><td>${c.rate}%</td><td>${c.months}</td><td>${fmt(c.monthly)}</td><td>${c.status==='active'?'Активен':'Закрыт'}</td>`; body.appendChild(tr); }); }
+
+    // ADMIN — управление кредитами
+    function ensureAdmin(){ const me=current(); return !!(me && me.isAdmin); }
+
+    function adminOpenCredits(username){ if(!ensureAdmin()) return toast('Только администратор','err'); const r=getRecs()[username]||{credits:[]}; const rows=(r.credits||[]).map(c=>`<tr data-id="${c.id}"><td>${c.title}</td><td>${fmt(c.amount)}</td><td>${c.rate}%</td><td>${c.months}</td><td>${fmt(c.monthly)}</td><td>${c.status==='active'?'Активен':'Закрыт'}</td><td><button class='btn gray small act-toggle'>${c.status==='active'?'Закрыть':'Открыть'}</button> <button class='btn ghost small act-del'>Удалить</button></td></tr>`).join(''); modal.open({ title:`Кредиты: ${username}`, bodyHTML:`<div class='muted'>Выдача/изменение кредитов.</div><table style='width:100%;margin-top:10px'><thead><tr><th>Кредит</th><th>Сумма</th><th>Ставка</th><th>Срок</th><th>Платёж</th><th>Статус</th><th>⛭</th></tr></thead><tbody id='adminCredsBody'>${rows||''}</tbody></table>`, okText:'Закрыть', onOk:()=>{} });
+      setTimeout(()=>{ const body=$('#adminCredsBody'); if(!body) return; body.onclick=(e)=>{ const btn=e.target.closest('button'); if(!btn) return; const tr=e.target.closest('tr'); const id=tr?.dataset?.id; if(!id) return; const all=getRecs(); const rec=all[username]; const i=rec.credits.findIndex(x=>x.id===id); if(i<0) return; if(btn.classList.contains('act-toggle')){ const c=rec.credits[i]; rec.credits[i].status = (c.status==='active')?'closed':'active'; setRecs(all); logAudit('Кредиты',(c.status==='active')?'Закрыт':'Открыт', username); adminOpenCredits(username); toast('Статус обновлён','ok'); } if(btn.classList.contains('act-del')){ rec.credits=rec.credits.filter(x=>x.id!==id); setRecs(all); logAudit('Кредиты','Удалён', username); adminOpenCredits(username); toast('Кредит удалён','warn'); } }; },0);
+    }
+
+    function adminGrantCredit(username){ if(!ensureAdmin()) return toast('Только администратор','err'); modal.open({ title:`Выдать кредит: ${username}`, bodyHTML:`<div class='grid-2' style='gap:10px'><input id='gTitle' class='input' placeholder='Название/банк'/><input id='gAmount' class='input' placeholder='Сумма'/><input id='gRate' class='input' placeholder='Годовая ставка %'/><input id='gMonths' class='input' placeholder='Срок, мес'/></div>`, okText:'Выдать', onOk:()=>{ const title=($('#gTitle')?.value||'').trim(); const amount=+($('#gAmount')?.value||0); const rate=+($('#gRate')?.value||0); const months=+($('#gMonths')?.value||0); if(!title||!(amount>0)||!(months>0)||rate<0){ toast('Заполните поля корректно','err'); return; } adminAddCreditDirect(username,title,amount,rate,months); toast('Кредит выдан','ok'); adminOpenCredits(username); } }); }
+
+    function adminAddCreditDirect(username,title,amount,rate,months){ const all=getRecs(); const r=all[username]||(all[username]={credits:[]}); const monthly=monthlyPayment(amount,rate,months); const item={ id:crypto.randomUUID(), title, amount, rate, months, monthly, status:'active' }; r.credits=[item, ...(r.credits||[])]; setRecs(all); logAudit('Кредиты','Выдан', username); }
+
+    // Admin view
+    function renderUsersList(){ const box=$('#usersList'); box.innerHTML=''; getUsers().filter(u=>!u.deleted).forEach(u=>{ const row=el('div','card panel'); row.style.display='flex'; row.style.alignItems='center'; row.style.justifyContent='space-between'; row.style.gap='10px'; const left=el('div'); const recs=getRecs(); const have=recs[u.username]?'заведена':'—'; left.innerHTML=`<div style="font-weight:800">${u.username} ${u.isAdmin? '<span class=\"badge\">админ</span>':''}</div><div class=\"muted\">Карточка: ${have}</div>`; const right=el('div'); right.style.display='flex'; right.style.gap='8px'; const open=el('button','btn small'); open.textContent='Открыть как...'; open.onclick=()=>{ modal.open({ title:'Открыть профиль как пользователь', bodyHTML:'<div class="muted">Введите СВОЁ имя (кто сейчас пользуется этим аккаунтом)</div><input id="adminRealName" class="input" placeholder="Ваше имя" style="margin-top:8px" />', okText:'Открыть', onOk:()=>{ const rn=(document.querySelector('#adminRealName').value||'').trim(); if(!rn){ toast('Введите СВОЁ имя','err'); return; } ensureRecord(u.username); setCurrent({ ...u, realName: rn }); showUser(); toast('Открыт профиль пользователя','ok'); } }); };
+      const creditsBtn=el('button','btn gray small'); creditsBtn.textContent='Кредиты'; creditsBtn.onclick=()=> adminOpenCredits(u.username);
+      const grantBtn=el('button','btn green small'); grantBtn.textContent='Выдать кредит'; grantBtn.onclick=()=> adminGrantCredit(u.username);
+      const del=el('button','btn red small'); del.textContent='Деактивировать'; del.onclick=()=>{ modal.open({ title:`Удалить ${u.username}?`, okText:'Удалить', okClass:'red', onOk:()=>{ const users=getUsers().map(x=> x.username===u.username? {...x, deleted:true}: x); setUsers(users); renderUsersList(); toast('Пользователь деактивирован','warn'); } }) };
+      right.append(open, creditsBtn, grantBtn, del); row.append(left, right); box.appendChild(row); }); }
+
+    // Audit (safe)
+    function renderAudit(){ const body=$('#auditTable'); body.innerHTML=''; const me=current(); if(!me) return; getAudit().filter(a=> a.user===me.username).slice(0,100).forEach(a=>{ const tr=el('tr'); tr.innerHTML=`<td>${niceTime(a.time)}</td><td>${a.section}</td><td>${a.action}</td>`; body.appendChild(tr); }); }
+
+    // Wire
+    function wire(){
+      window.addEventListener('resize', updateTop);
+      $('#loginBtn').onclick=()=>login($('#loginUser').value,$('#loginPass').value,$('#loginRealName').value);
+      $('#regBtn').onclick=()=>{ try{ register($('#regUser').value,$('#regPass').value,$('#regPhone').value); toast('Аккаунт создан','ok'); $('#loginUser').value=$('#regUser').value; $('#loginPass').value=$('#regPass').value; }catch(e){ toast(e.message,'err') } };
+
+      // User handlers
+      const tgs=$('#toggleSecure'); if(tgs){ tgs.onclick=()=>{ const pn=$('#passNum'); if(pn){ pn.classList.toggle('reveal'); } updateSecureBtn(); }; }
+      $('#savePass').onclick=savePassport; $('#saveContact').onclick=saveContact; $('#saveHome').onclick=saveHome; $('#saveReg').onclick=saveReg;
+      $('#copyContact').onclick=()=>{ const txt = `Телефон: ${$('#contactPhone').value}\nВладелец: ${$('#contactName').value}`; navigator.clipboard.writeText(txt).then(()=> toast('Скопировано','ok')).catch(()=> toast('Не удалось скопировать','err')); };
+      $('#passFiles').addEventListener('change', ()=> readFiles($('#passFiles'), (arr)=>{ const me=current(); if(!me) return; const all=getRecs(); const r=all[me.username]; r.passport.files=(r.passport.files||[]).concat(arr); r.passport.updatedAt=nowISO(); setRecs(all); loadUserForms(); logAudit('Паспорт','Загружены файлы'); toast('Загружено','ok'); $('#passFiles').value=''; }));
+      $('#homeFiles').addEventListener('change', ()=> readFiles($('#homeFiles'), (arr)=>{ const me=current(); if(!me) return; const all=getRecs(); const r=all[me.username]; r.home.files=(r.home.files||[]).concat(arr); r.home.updatedAt=nowISO(); setRecs(all); loadUserForms(); logAudit('Жильё','Загружены файлы'); toast('Загружено','ok'); $('#homeFiles').value=''; }));
+      $('#regFiles').addEventListener('change', ()=> readFiles($('#regFiles'), (arr)=>{ const me=current(); if(!me) return; const all=getRecs(); const r=all[me.username]; r.reg.files=(r.reg.files||[]).concat(arr); r.reg.updatedAt=nowISO(); setRecs(all); loadUserForms(); logAudit('Регистрация','Загружены файлы'); toast('Загружено','ok'); $('#regFiles').value=''; }));
+
+      // Export / print / delete
+      $('#exportJson').onclick=exportJSON; $('#importJson').addEventListener('change', ()=>{ const f=$('#importJson').files[0]; if(f) importJSON(f) }); $('#printBtn').onclick=()=> window.print();
+      $('#deleteMe').onclick=()=>{ modal.open({ title:'Удалить аккаунт?', okText:'Удалить', okClass:'red', onOk:()=>{ const me=current(); if(!me) return; const users=getUsers().map(u=> u.username===me.username? {...u, deleted:true}: u); setUsers(users); toast('Аккаунт удалён','warn'); logout(); } }) };
+      
+      // Change password
+      $('#changePassword').onclick=()=>{
+        modal.open({
+          title:'Сменить пароль',
+          okText:'Изменить',
+          okClass:'',
+          bodyHTML:`
+            <label class="muted">Старый пароль</label>
+            <input id="oldPass" class="input" type="password" placeholder="Текущий пароль" />
+            <label class="muted">Новый пароль</label>
+            <input id="newPass" class="input" type="password" placeholder="Новый пароль" />
+            <label class="muted">Повторите новый пароль</label>
+            <input id="confirmPass" class="input" type="password" placeholder="Повторите новый пароль" />
+          `,
+          onOk:()=>{
+            const me=current();
+            if(!me) return;
+            const oldPass=$('#oldPass').value;
+            const newPass=$('#newPass').value;
+            const confirmPass=$('#confirmPass').value;
+            
+            if(!oldPass || !newPass || !confirmPass) {
+              toast('Заполните все поля','err');
+              return;
+            }
+            
+            const users=getUsers();
+            const user=users.find(u=>u.username===me.username);
+            
+            if(!user || user.password !== oldPass) {
+              toast('Неверный старый пароль','err');
+              return;
+            }
+            
+            if(newPass !== confirmPass) {
+              toast('Новые пароли не совпадают','err');
+              return;
+            }
+            
+            if(newPass.length < 3) {
+              toast('Пароль должен быть минимум 3 символа','err');
+              return;
+            }
+            
+            user.password = newPass;
+            const userIndex = users.findIndex(u=>u.username===me.username);
+            users[userIndex] = user;
+            setUsers(users);
+            
+            toast('Пароль успешно изменён','ok');
+          }
+        });
+      };
+
+      // Admin tools
+      $('#adminExportAll').onclick=adminExportAll; $('#adminImportAll').addEventListener('change', ()=>{ const f=$('#adminImportAll').files[0]; if(f) adminImportAll(f) });
+    }
+
+    // Export/Import (admin/all & user JSON)
+    function exportJSON(){ const me=current(); if(!me) return; const name=me.username; const data=getRecs()[name]; const blob=new Blob([JSON.stringify({ user:name, data }, null, 2)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`myinfo_${name}.json`; a.click(); URL.revokeObjectURL(a.href); }
+    function importJSON(file){ const fr=new FileReader(); fr.onload=()=>{ try{ const obj=JSON.parse(fr.result); if(!obj||!obj.user||!obj.data) throw 'bad'; const all=getRecs(); all[obj.user]=obj.data; setRecs(all); const me=current(); if(me && obj.user===me.username) showUser(); toast('Импорт завершён','ok'); logAudit('Импорт','Импортирован JSON', obj.user); }catch(_){ toast('Неверный JSON','err') } }; fr.readAsText(file); }
+    function adminExportAll(){ const blob=new Blob([JSON.stringify({ users:getUsers(), records:getRecs(), audit:getAudit() }, null, 2)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='myinfo_backup_all.json'; a.click(); URL.revokeObjectURL(a.href); }
+    function adminImportAll(file){ const fr=new FileReader(); fr.onload=()=>{ try{ const obj=JSON.parse(fr.result); if(!obj.users||!obj.records) throw 'bad'; setUsers(obj.users); setRecs(obj.records); if(obj.audit) setAudit(obj.audit); renderUsersList(); toast('Импорт (все) завершён','ok'); }catch(_){ toast('Неверный JSON','err') } }; fr.readAsText(file); }
+
+    // Self-tests
+    function tests(){
+      // базовые
+      console.assert(/^\d{10,15}$/.test('79001234567')===true, 'isPhone true');
+      console.assert(/^\d{10,15}$/.test('79a01234567')===false, 'isPhone false');
+      console.assert((function(){ const mp=(s,a,m)=>{const S=+s||0; const i=(+a||0)/100/12; const n=+m||0; if(S<=0||n<=0) return 0; if(i<=0) return Math.round(S/n*100)/100; const f=i*Math.pow(1+i,n)/(Math.pow(1+i,n)-1); return Math.round(S*f*100)/100; }; return mp(12000,0,12)===1000 })(), 'monthly zero rate');
+      const users0=getUsers(); setUsers([{username:'Max',password:'000',isAdmin:false,deleted:true}]); ensureAdminMax(); const uAfter=getUsers().find(u=>u.username==='Max'); console.assert(uAfter && !uAfter.deleted && uAfter.password==='12345' && uAfter.isAdmin===true, 'ensureAdminMax repairs Max'); setUsers(users0);
+      const recsBefore=getRecs(); setRecs({}); ensureRecord('TestUser1'); const p=getRecs()['TestUser1'].passport.number; console.assert(/^\d{4} \d{6}$/.test(p),'auto passport format'); setRecs(recsBefore);
+      console.assert(!document.querySelector('#addCredit'), 'no addCredit UI for user');
+      // null-session safety
+      (function(){ const prev=current(); localStorage.removeItem(LS_SESSION); let ok=true; try{ renderAudit(); rec(); }catch(e){ ok=false } console.assert(ok,'no crash without session'); if(prev) setCurrent(prev); else localStorage.removeItem(LS_SESSION); })();
+      // admin can grant
+      const prevSession=current(); setCurrent({username:'Max',password:'12345',isAdmin:true,realName:'Админ'}); ensureRecord('LoanUser'); adminAddCreditDirect('LoanUser','Тест кредит',10000,10,12); const added=(getRecs()['LoanUser'].credits||[]).some(c=>c.title==='Тест кредит'); console.assert(added,'admin can grant credit'); if(prevSession) setCurrent(prevSession); else localStorage.removeItem(LS_SESSION);
+      // toggle secure button exists after showUser()
+      setCurrent({username:'TestUser1', password:'x', isAdmin:false, realName:'Тест'}); ensureRecord('TestUser1'); showUser(); console.assert(!!document.querySelector('#toggleSecure'),'toggleSecure present');
+    }
+
+    function init(){
+      seed();
+      wire();
+      updateTop();
+      tests();
+      
+      // Try Telegram auto-login first
+      if (tgUser && !load(LS_SESSION, null)) {
+        if (tryTelegramAutoLogin()) {
+          return;
+        }
+      }
+      
+      const me=load(LS_SESSION,null);
+      if(me){
+        const users=getUsers();
+        const fresh=users.find(u=>u.username===me.username && !u.deleted);
+        if(fresh){
+          setCurrent({ ...fresh, realName: me.realName });
+          if(fresh.isAdmin){
+            showAdmin();
+          } else {
+            ensureRecord(fresh.username);
+            showUser();
+          }
+        } else {
+          showAuth();
+        }
+      } else {
+        showAuth();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

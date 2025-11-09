@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>HomeOS — Telegram Mini App</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{
+    --bg1:#f6f7fb; --bg2:#eef2f8; --bg3:#ffffff;
+    --ink:#0e1116; --muted:#6b7280; --card:#ffffffa6; --ring:#00000012;
+    --shadow: 0 30px 60px rgba(0,0,0,.12), 0 10px 24px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;color:var(--ink);
+    background: radial-gradient(900px 800px at 80% -10%, rgba(22,163,255,.18), transparent 60%),
+                radial-gradient(700px 600px at -10% 100%, rgba(22,163,255,.12), transparent 60%),
+                linear-gradient(180deg, var(--bg1), var(--bg2) 40%, var(--bg3));}
+  .wrap{min-height:100%;display:grid;place-items:center;padding:20px}
+  .phone{width:min(390px,94vw);aspect-ratio:390/844;background:
+      radial-gradient(120% 120% at 80% 0%, rgba(255,255,255,.8), rgba(255,255,255,.35)),
+      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="850"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%23ffffff"/><stop offset="1" stop-color="%23f4f7fb"/></linearGradient></defs><rect width="100%" height="100%" fill="url(%23g)"/></svg>') center/cover no-repeat;
+    border-radius:40px;box-shadow:var(--shadow);position:relative;overflow:hidden;border:1px solid #e8ecf4}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);height:30px;width:180px;background:#0e1116;border-bottom-left-radius:18px;border-bottom-right-radius:18px;opacity:.06}
+  .status{position:absolute;inset:14px 18px auto 18px;display:flex;justify-content:space-between;align-items:center;font-weight:700}
+  .status .ind{display:flex;gap:8px;color:#111;opacity:.6}
+  .grid{position:absolute;inset:80px 18px 22px 18px;display:grid;grid-template-rows:1fr 1fr;gap:18px}
+  .row{display:flex;align-items:center;justify-content:center;gap:22px}
+  .tile{width:110px;text-align:center;-webkit-tap-highlight-color:transparent}
+  .icon{width:110px;height:110px;border-radius:26px;background:var(--card);backdrop-filter:blur(10px);border:1px solid #e6ebf5;display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.65), 0 10px 20px rgba(0,0,0,.08);cursor:pointer;position:relative;transition:.15s ease}
+  .icon:hover{transform:translateY(-2px)}
+  .icon:active{transform:translateY(0) scale(.98)}
+  .icon-img{width:84px;height:84px;object-fit:contain;filter:drop-shadow(0 0 18px rgba(16,133,255,.45)) drop-shadow(0 1px 1px rgba(0,0,0,.2));opacity:.96;transition:.15s ease}
+  .label{margin-top:10px;font-weight:700;font-size:14px}
+  .homebar{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);width:120px;height:5px;border-radius:999px;background:#0e1116;opacity:.12}
+  @media (max-height:740px){.grid{inset:70px 16px 18px 16px}.icon{width:100px;height:100px}.tile{width:100px}.icon-img{width:78px;height:78px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="phone" role="application" aria-label="Стартовый экран">
+    <div class="notch" aria-hidden="true"></div>
+    <div class="status">
+      <div class="time" id="clock">--:--</div>
+      <div class="ind" aria-hidden="true"><span>5G</span><span>▮▮▮</span><span>🔋</span></div>
+    </div>
+
+    <div class="grid" id="apps">
+      <div class="row">
+        <!-- Банк -->
+        <div class="tile">
+          <button class="icon" data-app="bank" aria-label="Открыть: Банк">
+            <img class="icon-img" alt="Банк" src="bank.png" data-alt="bank.png" onerror="this.onerror=null;this.src=this.dataset.alt;"/>
+          </button>
+          <div class="label">Банк</div>
+        </div>
+        <!-- Моя работа -->
+        <div class="tile">
+          <button class="icon" data-app="work" aria-label="Открыть: Моя работа">
+            <img class="icon-img" alt="Моя работа" src="work.png" data-alt="my_work.png" onerror="this.onerror=null;this.src=this.dataset.alt;"/>
+          </button>
+          <div class="label">Моя работа</div>
+        </div>
+      </div>
+      <div class="row">
+        <!-- Моя информация -->
+        <div class="tile">
+          <button class="icon" data-app="info" aria-label="Открыть: Моя информация">
+            <img class="icon-img" alt="Моя информация" src="info.png" data-alt="my_info.png" onerror="this.onerror=null;this.src=this.dataset.alt;"/>
+          </button>
+          <div class="label">Моя информация</div>
+        </div>
+        <!-- Магазин -->
+        <div class="tile">
+          <button class="icon" data-app="shop" aria-label="Открыть: Магазин">
+            <img class="icon-img" alt="Магазин" src="shop.png" data-alt="shop.png" onerror="this.onerror=null;this.src=this.dataset.alt;"/>
+          </button>
+          <div class="label">Магазин</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="homebar" aria-hidden="true"></div>
+  </div>
+</div>
+
+<script>
+  // Telegram Web App initialization
+  const tg = window.Telegram?.WebApp;
+  
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    
+    // Apply Telegram theme
+    document.documentElement.style.setProperty('--bg1', tg.themeParams.bg_color || '#f6f7fb');
+    document.documentElement.style.setProperty('--bg2', tg.themeParams.secondary_bg_color || '#eef2f8');
+    document.documentElement.style.setProperty('--ink', tg.themeParams.text_color || '#0e1116');
+    
+    // Get user info from Telegram
+    const initData = tg.initDataUnsafe;
+    if (initData?.user) {
+      const user = initData.user;
+      console.log('Telegram User:', user.first_name, user.id);
+      // Store Telegram user data for other pages
+      localStorage.setItem('tg_user', JSON.stringify({
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        username: user.username,
+        photo_url: user.photo_url
+      }));
+    }
+    
+    // Close confirmation
+    tg.enableClosingConfirmation();
+  }
+
+  const clock=document.getElementById('clock');
+  const tick=()=>{const d=new Date();const hh=String(d.getHours()).padStart(2,'0');const mm=String(d.getMinutes()).padStart(2,'0');clock.textContent=`${hh}:${mm}`};
+  tick(); setInterval(tick,20000);
+
+  // Пути: поменяй при необходимости
+  const ROUTES={ bank:'bank.html', work:'my_work.html', info:'my_info.html', shop:'shop.html' };
+  document.getElementById('apps').addEventListener('click',e=>{
+    const btn=e.target.closest('.icon');
+    if(!btn)return;
+    const href=ROUTES[btn.dataset.app]||'#';
+    if(href!=='#') {
+      // Add haptic feedback in Telegram
+      if (tg?.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred('light');
+      }
+      window.location.href=href;
+    }
+  });
+</script>
+</body>
+</html>

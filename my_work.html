@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>MyWork — Telegram Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root{
+      --bg:#0f1216; --panel:#171b21; --panel-2:#1d232b; --text:#e9eef5; --muted:#a5b1c2;
+      --blue:#3aa0ff; --blue-2:#2589e6; --green:#35c46a; --red:#ff4d4f; --amber:#f5a524; --radius:18px;
+      --shadow:0 20px 40px rgba(0,0,0,.35), 0 6px 16px rgba(0,0,0,.35);
+    }
+    html,body{ height:100% }
+    body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;
+      background: radial-gradient(1200px 800px at 80% -10%, rgba(58,160,255,.08), transparent 50%),
+                  radial-gradient(900px 600px at -10% 110%, rgba(53,196,106,.07), transparent 50%), var(--bg);
+      color:var(--text);
+    }
+    a{ color:var(--blue); text-decoration:none } a:hover{ text-decoration:underline }
+    .hidden{ display:none !important }
+    .wrap{ max-width:1200px; margin:0 auto; padding:24px }
+    .card{ background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)), var(--panel); border:1px solid rgba(255,255,255,.06); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .panel{ padding:20px }
+    .subcard{ background: var(--panel-2); border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:16px }
+
+    .grid{ display:grid; grid-template-columns: 1.4fr 1fr; gap:20px }
+    .grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap:20px }
+    .grid-3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px }
+
+    .btn{ background: var(--blue); color:#fff; border:0; border-radius:14px; padding:12px 16px; font-weight:700; box-shadow: 0 8px 20px rgba(58,160,255,.25); cursor:pointer; transition:.15s ease }
+    .btn:hover{ background: var(--blue-2); transform: translateY(-1px) }
+    .btn:active{ transform: translateY(0) }
+    .btn.small{ padding:8px 12px; font-weight:600; border-radius:12px }
+    .btn.gray{ background:#2a3039 }
+    .btn.red{ background:var(--red) }
+    .btn.green{ background:var(--green) }
+
+    .input,.select{ width:100%; max-width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.08); outline:none; background: var(--panel-2); color:var(--text); box-sizing: border-box; }
+
+    /* pretty checkbox */
+    .task{ display:flex; align-items:center; gap:12px; padding:10px 12px; background:var(--panel-2); border:1px solid rgba(255,255,255,.06); border-radius:12px }
+    .check{ position:relative; width:20px; height:20px; border-radius:8px; border:1px solid rgba(255,255,255,.18); background:#1b212a; display:grid; place-items:center; cursor:pointer }
+    .check::after{ content:""; width:12px; height:12px; border-radius:4px; opacity:0; transform: scale(.8); background:var(--green); transition:.15s ease }
+    .task.done .check::after{ opacity:1; transform: scale(1) }
+    .task label{ cursor:pointer }
+
+    .pill{ display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; font-size:12px; background:#222833; border:1px solid rgba(255,255,255,.06) }
+    .muted{ color:var(--muted) }
+
+    table{ width:100%; border-collapse: collapse }
+    th, td{ padding:10px 8px; border-bottom:1px solid rgba(255,255,255,.06); text-align:left; font-size:14px }
+    th{ color:var(--muted); font-weight:600 }
+
+    .modal-backdrop{ position: fixed; inset:0; background: rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:50 }
+    .modal{ width:min(560px,94%); background: var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:18px; box-shadow: var(--shadow); transform: translateY(10px) scale(.98); opacity:0; transition:.2s ease }
+    .modal.show{ transform: translateY(0) scale(1); opacity:1 } .modal-backdrop.show{ display:flex }
+    .modal header{ padding:18px 20px; border-bottom:1px solid rgba(255,255,255,.06); font-weight:800 }
+    .modal main{ padding:20px; display:flex; flex-direction:column; gap:12px }
+    .modal footer{ padding:16px 20px; display:flex; gap:12px; justify-content:flex-end; border-top:1px solid rgba(255,255,255,.06) }
+
+    #toasts{ position: fixed; right: 18px; bottom: 18px; display:flex; flex-direction:column; gap:10px; z-index:60 }
+    .toast{ background: var(--panel); border:1px solid rgba(255,255,255,.08); border-left:4px solid var(--blue); padding:12px 14px; border-radius:12px; box-shadow: var(--shadow); min-width: 260px; animation: slideIn .35s ease both }
+    .toast.ok{ border-left-color: var(--green) } .toast.warn{ border-left-color: var(--amber) } .toast.err{ border-left-color: var(--red) }
+    @keyframes slideIn{ from{ transform: translateY(12px); opacity:0 } to{ transform: translateY(0); opacity:1 } }
+
+    /* Role picker */
+    .roles{ display:grid; grid-template-columns: 1fr 1fr; gap:12px }
+    .role-card{ border:1px solid rgba(255,255,255,.08); background:var(--panel-2); border-radius:14px; padding:12px; display:flex; gap:10px; align-items:flex-start }
+    .role-radio{ margin-top:4px }
+    .role-title{ font-weight:800 }
+
+    /* Admin board */
+    .kpis{ display:grid; grid-template-columns:repeat(3, 1fr); gap:12px }
+    .kpi{ background:var(--panel-2); border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:14px }
+
+    /* iOS-style Exit Indicator */
+    .ios-exit-indicator {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 5px;
+      background: rgba(255, 255, 255, .3);
+      border-radius: 0 0 8px 8px;
+      z-index: 100;
+      cursor: pointer;
+      transition: all .3s ease;
+    }
+    .ios-exit-indicator:hover {
+      height: 8px;
+      background: rgba(255, 255, 255, .5);
+    }
+    .ios-exit-indicator.dragging {
+      height: 30px;
+      background: linear-gradient(180deg, rgba(255, 77, 79, .7), rgba(255, 77, 79, .4));
+    }
+
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr } .grid-2{ grid-template-columns:1fr } .grid-3{ grid-template-columns:1fr } .kpis{ grid-template-columns:1fr } }
+  </style>
+</head>
+<body>
+  <!-- iOS-style Exit Indicator -->
+  <div class="ios-exit-indicator hidden" id="exitIndicator"></div>
+
+  <!-- AUTH -->
+  <div class="wrap" id="authScreen">
+    <div class="card panel">
+      <div style="margin-bottom: 16px;">
+        <button class="btn gray small" onclick="window.location.href='index.html'" style="width: auto;">← Рабочий стол</button>
+      </div>
+      <h2 style="margin:0 0 12px">Вход / Регистрация</h2>
+      <div class="grid-2">
+        <div class="subcard">
+          <h3 style="margin:0 0 10px">Вход</h3>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <input id="loginUser" class="input" placeholder="Имя пользователя" />
+            <input id="loginPass" class="input" placeholder="Пароль" type="password" />
+            <button id="loginBtn" class="btn">Войти</button>
+          </div>
+          <p class="muted" style="margin-top:10px">После входа выйти нельзя — только удалить аккаунт в «Настройках».</p>
+        </div>
+        <div class="subcard" id="registerForm">
+          <h3 style="margin:0 0 10px">Регистрация</h3>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <input id="regUser" class="input" placeholder="Уникальное имя (мин. 3)" />
+            <input id="regPass" class="input" placeholder="Пароль" type="password" />
+            <input id="regPhone" class="input" inputmode="numeric" pattern="\d*" placeholder="Телефон (только цифры)" />
+            <button id="regBtn" class="btn">Создать аккаунт</button>
+          </div>
+          <p class="muted" style="margin-top:10px">Работу выберешь при первом входе.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div class="wrap hidden" id="app">
+    <div class="grid">
+      <div class="card panel">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px">
+          <div>
+            <h3 style="margin:0">Профиль</h3>
+            <div class="muted">Пользователь: <b id="who"></b> · Должность: <span id="role">—</span></div>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center">
+            <div class="pill">Ставка: <b><span id="rate">—</span> M$ / ч</b></div>
+            <button id="changeRole" class="btn gray small">Сменить</button>
+            <button id="logoutAdmin" class="btn gray small hidden">Выйти</button>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:12px">
+          <button id="startShift" class="btn green">Начать смену</button>
+          <button id="stopShift" class="btn gray" disabled>Завершить смену</button>
+        </div>
+        <div class="muted" style="margin-top:8px">Статус: <span id="status">не на смене</span></div>
+      </div>
+
+      <div class="card panel" id="tasksCard">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px">
+          <h3 style="margin:0">Чек-лист смены</h3>
+          <button id="resetTasks" class="btn gray small">Сбросить</button>
+        </div>
+        <div id="tasks" style="display:flex; flex-direction:column; gap:10px; margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:20px">
+      <div class="card panel">
+        <h3 style="margin:0 0 10px">История смен</h3>
+        <table>
+          <thead><tr><th>Начало</th><th>Конец</th><th>Длительность</th><th>Выплата</th></tr></thead>
+          <tbody id="log"></tbody>
+        </table>
+      </div>
+      <div class="card panel">
+        <h3 style="margin:0 0 10px">Настройки</h3>
+        <p class="muted">Управление аккаунтом</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button id="changePassword" class="btn">Сменить пароль</button>
+          <button id="deleteAcc" class="btn red">Удалить аккаунт</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN BOARD -->
+    <div class="card panel hidden" id="adminBoard" style="margin-top:20px">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px">
+        <h3 style="margin:0">Дэшборд администратора</h3>
+        <div class="pill">Только просмотр и управление сменами</div>
+      </div>
+      <div class="kpis" style="margin-top:12px">
+        <div class="kpi"><div class="muted">Активных смен</div><div id="kpiActive" style="font-size:24px; font-weight:800">0</div></div>
+        <div class="kpi"><div class="muted">Сегодня, всего выплат</div><div id="kpiToday" style="font-size:24px; font-weight:800">0</div></div>
+        <div class="kpi"><div class="muted">Всего за всё время</div><div id="kpiAll" style="font-size:24px; font-weight:800">0</div></div>
+      </div>
+
+      <div class="grid-2" style="margin-top:16px">
+        <div class="subcard">
+          <h4 style="margin:0 0 10px">Активные смены</h4>
+          <table>
+            <thead><tr><th>Пользователь</th><th>Роль</th><th>Начало</th><th>Длительность</th><th>Текущая выплата</th><th>⛭</th></tr></thead>
+            <tbody id="adminActive"></tbody>
+          </table>
+        </div>
+        <div class="subcard">
+          <h4 style="margin:0 0 10px">Пользователи</h4>
+          <table>
+            <thead><tr><th>Имя</th><th>Роль</th><th>Ставка</th><th>На смене</th></tr></thead>
+            <tbody id="adminUsers"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="subcard" style="margin-top:16px">
+        <h4 style="margin:0 0 10px">Последние смены</h4>
+        <table>
+          <thead><tr><th>Пользователь</th><th>Начало</th><th>Конец</th><th>Минут</th><th>Выплата</th></tr></thead>
+          <tbody id="adminHistory"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal & Toasts -->
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div class="modal" id="modal">
+      <header id="modalTitle">Подтверждение</header>
+      <main id="modalBody"></main>
+      <footer>
+        <button class="btn gray" id="modalCancel">Отмена</button>
+        <button class="btn" id="modalOk">OK</button>
+      </footer>
+    </div>
+  </div>
+  <div id="toasts"></div>
+
+  <script>
+    // Telegram Web App initialization
+    const tg = window.Telegram?.WebApp;
+    let tgUser = null;
+    
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      tg.enableClosingConfirmation();
+      
+      // Get Telegram user
+      const initData = tg.initDataUnsafe;
+      if (initData?.user) {
+        tgUser = initData.user;
+        localStorage.setItem('tg_user', JSON.stringify(tgUser));
+      } else {
+        const stored = localStorage.getItem('tg_user');
+        if (stored) tgUser = JSON.parse(stored);
+      }
+      
+      // Setup back button
+      tg.BackButton.show();
+      tg.BackButton.onClick(() => {
+        window.location.href = 'index.html';
+      });
+      
+      // Apply theme
+      if (tg.themeParams.bg_color) {
+        document.documentElement.style.setProperty('--bg', tg.themeParams.bg_color);
+        document.documentElement.style.setProperty('--panel', tg.themeParams.secondary_bg_color || '#171b21');
+        document.documentElement.style.setProperty('--text', tg.themeParams.text_color || '#e9eef5');
+      }
+    }
+
+    // KEYS
+    const LSU='mywork_users_v2';
+    const LSS='mywork_session_v2';
+    const LSL='mywork_shifts_v2';
+    const LST='mywork_tasks_v2';
+    const LSR='mywork_running_v1'; // username -> startISO
+
+    // ROLES
+    const ROLES={
+      bus:{ name:'Водитель автобуса', rate:120, tasks:[
+        'Осмотр автобуса перед выездом',
+        'Следовать маршруту и расписанию',
+        'Остановка у всех точек',
+        'Вести простой журнал рейса'
+      ]},
+      cart:{ name:'Водитель квадроцикла', rate:100, tasks:[
+        'Проверить бензин и тормоза',
+        'Следовать маршруту',
+        'Остановка у всех точек',
+        'Отметить поездку в журнале'
+      ]},
+      guard:{ name:'Охрана', rate:90, tasks:[
+        'Обход периметра',
+        'Проверка пропусков',
+        'Отметка в журнале каждые 30 мин',
+        'Доклад об инцидентах'
+      ]},
+      tech:{ name:'Техник', rate:130, tasks:[
+        'Проверка инструмента',
+        'ТО транспорта по плану',
+        'Запись в технический журнал',
+        'Сдача отчёта мастеру'
+      ]}
+    };
+
+    // HELPERS
+    const $ = s=>document.querySelector(s);
+    const el=(t,c)=>{const n=document.createElement(t); if(c) n.className=c; return n};
+    const toast=(m,t='ok',ms=2400)=>{const b=$('#toasts'); const x=el('div','toast '+t); x.textContent=m; b.appendChild(x); setTimeout(()=>{x.style.opacity=.0;x.style.transform='translateY(8px)'; setTimeout(()=>x.remove(),350)},ms)};
+    const load=(k,f)=>{try{const s=localStorage.getItem(k); return s?JSON.parse(s):f}catch(_){return f}};
+    const save=(k,v)=> localStorage.setItem(k, JSON.stringify(v));
+    const fmtTime=i=> new Date(i).toLocaleString('ru-RU');
+    const formatDuration=min=>{ min=Math.max(0, Math.floor(min)); if(min<1) return '<1 мин'; if(min<60) return min+' мин'; const h=Math.floor(min/60), m=min%60; return `${h} ч ${m} мин`; };
+    const calcPay=(min,rate)=> min<10? 0 : Math.round((min/60*rate)*100)/100;
+
+    // STORES
+    const users=()=>load(LSU,[]);
+    const setUsers=v=>save(LSU,v);
+    const session=()=>load(LSS,null);
+    const setSession=v=>save(LSS,v);
+    const shifts=()=>load(LSL,{});
+    const setShifts=v=>save(LSL,v);
+    const tasksState=()=>load(LST,{});
+    const setTasks=v=>save(LST,v);
+    const running=()=>load(LSR,{});
+    const setRunning=v=>save(LSR,v);
+
+    // SEED — гарантируем админа Max всегда
+    function ensureAdminMax(){
+      let us = users();
+      if(!Array.isArray(us)) us=[];
+      const i=us.findIndex(u=>u.username==='Max');
+      if(i===-1) us.unshift({ username:'Max', password:'12345', isAdmin:true, deleted:false, roleKey:'admin', rate:0 });
+      else us[i] = { ...us[i], password:'12345', isAdmin:true, deleted:false, roleKey: us[i].roleKey||'admin', rate: us[i].rate||0 };
+      setUsers(us);
+    }
+
+    // ROLE utils
+    const roleName=u=> u.roleKey==='admin'? 'Администратор' : (ROLES[u.roleKey||'bus']?.name||'—');
+
+    function ensureRoleSelected(){
+      const me=session(); const list=users(); const idx=list.findIndex(x=>x.username===me?.username);
+      if(idx<0||!me) return; const u={...list[idx]};
+      if(u.isAdmin){
+        // Админ интерфейс
+        $('#changeRole').disabled=true; $('#changeRole').classList.add('hidden');
+        const tC=$('#tasksCard'); if(tC) tC.classList.add('hidden');
+        $('#startShift').disabled=true; $('#stopShift').disabled=true; $('#status').textContent='админ-режим';
+        $('#role').textContent='Администратор'; $('#rate').textContent='—';
+        $('#adminBoard').classList.remove('hidden');
+        $('#logoutAdmin').classList.remove('hidden');
+        renderAdmin();
+        return;
+      }
+      $('#adminBoard').classList.add('hidden');
+      $('#logoutAdmin').classList.add('hidden');
+      $('#changeRole').classList.remove('hidden');
+      if(!u.roleKey || !ROLES[u.roleKey]){ openRolePicker(); }
+      else { $('#role').textContent=roleName(u); $('#rate').textContent=u.rate; renderTasks(); }
+    }
+
+    function openRolePicker(){
+      const roleList = Object.entries(ROLES).map(([k,v],i)=>
+        `<label class="role-card"><input class="role-radio" type="radio" name="role" value="${k}" ${i===0?'checked':''}> <div><div class="role-title">${v.name}</div><div class="muted">Ставка: ${v.rate} M$ / ч</div></div></label>`).join('');
+      const body=`<div class="muted">Выберите работу для профиля. Можно сменить позже.</div><div class="roles" style="margin-top:8px">${roleList}</div>`;
+      openModal('Выбор работы', body, 'Выбрать', '', ()=>{
+        const picked = document.querySelector('input[name="role"]:checked').value;
+        setRoleForCurrent(picked);
+        toast('Работа выбрана','ok');
+      });
+    }
+
+    function setRoleForCurrent(roleKey){
+      const me=session(); const list=users(); const idx=list.findIndex(x=>x.username===me.username);
+      if(idx<0) return;
+      const u={...list[idx]}; u.roleKey=roleKey; u.rate=ROLES[roleKey].rate; list[idx]=u; setUsers(list); setSession({ username:u.username, rate:u.rate, roleKey:u.roleKey, isAdmin:u.isAdmin||false });
+      const map=tasksState(); map[u.username]=ROLES[roleKey].tasks.map(t=>({title:t,done:false})); setTasks(map);
+      $('#role').textContent=roleName(u); $('#rate').textContent=u.rate; renderTasks();
+    }
+
+    // RENDER
+    function renderApp(){
+      const me=session();
+      if(!me){
+        $('#authScreen').classList.remove('hidden');
+        $('#app').classList.add('hidden');
+        $('#exitIndicator').classList.add('hidden');
+        return;
+      }
+      $('#authScreen').classList.add('hidden');
+      $('#app').classList.remove('hidden');
+      $('#exitIndicator').classList.remove('hidden');
+      initExitIndicator();
+      $('#who').textContent=me.username;
+      $('#rate').textContent=me.rate ?? '—';
+      ensureRoleSelected();
+      renderLog();
+      updateStatus();
+    }
+
+    // iOS-style exit indicator
+    function initExitIndicator() {
+      const indicator = $('#exitIndicator');
+      if (!indicator) return;
+
+      let startY = 0;
+      let currentY = 0;
+      let dragging = false;
+
+      // Remove old listeners
+      const newIndicator = indicator.cloneNode(true);
+      indicator.parentNode.replaceChild(newIndicator, indicator);
+      const ind = $('#exitIndicator');
+
+      ind.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        startY = e.clientY;
+        currentY = 0;
+        ind.classList.add('dragging');
+        e.preventDefault();
+      });
+
+      document.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        currentY = Math.max(0, e.clientY - startY);
+        
+        if (currentY > 100) {
+          dragging = false;
+          ind.classList.remove('dragging');
+          // Logout
+          const me = session();
+          if (me && me.isAdmin) {
+            localStorage.removeItem(LSS);
+            $('#app').classList.add('hidden');
+            $('#authScreen').classList.remove('hidden');
+            $('#exitIndicator').classList.add('hidden');
+            toast('Выход выполнен','ok');
+          }
+        }
+      });
+
+      document.addEventListener('pointerup', () => {
+        if (!dragging) return;
+        dragging = false;
+        ind.classList.remove('dragging');
+      });
+    }
+
+    function renderTasks(){
+      const me=session(); const box=$('#tasks'); box.innerHTML='';
+      const map=tasksState();
+      if(!map[me.username]){
+        if(me.roleKey && ROLES[me.roleKey]) map[me.username]=ROLES[me.roleKey].tasks.map(t=>({title:t,done:false}));
+        else map[me.username]=[ {title:'Начать смену',done:false} ];
+        setTasks(map);
+      }
+      map[me.username].forEach((t,i)=>{
+        const row=el('div','task'+(t.done?' done':''));
+        const boxC=el('div','check');
+        const label=el('label'); label.textContent=t.title;
+        const toggle=()=>{ const m=tasksState(); m[me.username][i].done=!m[me.username][i].done; setTasks(m); renderTasks() };
+        boxC.onclick=toggle; label.onclick=toggle;
+        row.append(boxC,label); box.appendChild(row);
+      });
+    }
+
+    function renderLog(){
+      const me=session(); const body=$('#log'); body.innerHTML='';
+      const userLog=(shifts()[me.username]||[]).slice(0,100);
+      userLog.forEach(s=>{
+        const tr=el('tr');
+        tr.innerHTML=`<td>${fmtTime(s.start)}</td><td>${fmtTime(s.end)}</td><td>${formatDuration(s.minutes)}</td><td>${s.pay.toFixed(2)} M$</td>`;
+        body.appendChild(tr);
+      })
+    }
+
+    // SHIFT (user)
+    let startedAt=null;
+    function updateStatus(){ $('#status').textContent = startedAt? 'на смене' : 'не на смене'; $('#startShift').disabled=!!startedAt; $('#stopShift').disabled=!startedAt; }
+    function startShift(){ if(session()?.isAdmin){ toast('Админ не может начинать смену','err'); return } startedAt=Date.now(); const r=running(); r[session().username]=new Date(startedAt).toISOString(); setRunning(r); updateStatus(); toast('Смена начата','ok'); }
+    function stopShift(){
+      if(session()?.isAdmin){ toast('Админ не может завершать смену','err'); return }
+      if(!startedAt) return;
+      const end=Date.now();
+      const minutes=(end-startedAt)/60000; const minInt=Math.floor(minutes);
+      const me=session(); const pay=calcPay(minutes, me.rate||0);
+      const body=`<div class="muted">Итоги смены</div>
+        <div>Длительность: <b>${formatDuration(minutes)}</b></div>
+        <div>Выплата: <b>${pay.toFixed(2)} M$</b>${minutes<10? ' (меньше 10 мин — без оплаты)':''}</div>`;
+      openModal('Завершить смену?', body, 'Подтвердить', '', ()=>{
+        if(minutes<1){ toast('Смена < 1 минуты — не сохранена','warn'); startedAt=null; const r=running(); delete r[me.username]; setRunning(r); updateStatus(); return }
+        const all=shifts(); all[me.username]=all[me.username]||[];
+        all[me.username].unshift({ start:new Date(startedAt).toISOString(), end:new Date(end).toISOString(), minutes:minInt, pay });
+        setShifts(all); startedAt=null; const r=running(); delete r[me.username]; setRunning(r); updateStatus(); renderLog(); toast('Смена завершена','ok');
+      });
+    }
+
+    // ADMIN features
+    function renderAdmin(){
+      // KPIs
+      const act = running(); const actCount = Object.keys(act).length; $('#kpiActive').textContent=actCount;
+      const today = new Date(); today.setHours(0,0,0,0);
+      let todayPay=0, allPay=0; const all=shifts();
+      Object.values(all).forEach(list=>{
+        (list||[]).forEach(s=>{ const p=s.pay||0; allPay+=p; if(new Date(s.start)>=today) todayPay+=p; })
+      });
+      $('#kpiToday').textContent = todayPay.toFixed(2)+' M$';
+      $('#kpiAll').textContent = allPay.toFixed(2)+' M$';
+
+      // Active table
+      const bodyA=$('#adminActive'); bodyA.innerHTML='';
+      const us=users();
+      Object.entries(act).forEach(([name, iso])=>{
+        const u=us.find(x=>x.username===name) || {rate:0, roleKey:null};
+        const start=new Date(iso).getTime(); const minutes=(Date.now()-start)/60000; const pay=calcPay(minutes, u.rate||0);
+        const tr=el('tr');
+        tr.innerHTML=`<td>${name}</td><td>${roleName(u)}</td><td>${fmtTime(iso)}</td><td>${formatDuration(minutes)}</td><td>${pay.toFixed(2)} M$</td>`;
+        const td=el('td'); const btn=el('button','btn red small'); btn.textContent='Принудительно завершить'; btn.onclick=()=> forceStop(name); td.appendChild(btn); tr.appendChild(td); bodyA.appendChild(tr);
+      });
+
+      // Users table
+      const bodyU=$('#adminUsers'); bodyU.innerHTML='';
+      us.filter(u=>!u.deleted).forEach(u=>{
+        const on = !!act[u.username];
+        const tr=el('tr'); tr.innerHTML=`<td>${u.username}${u.isAdmin?' <span class="pill">админ</span>':''}</td><td>${roleName(u)}</td><td>${u.rate||0}</td><td>${on? 'на смене':'—'}</td>`; bodyU.appendChild(tr);
+      });
+
+      // History (last 20)
+      const bodyH=$('#adminHistory'); bodyH.innerHTML='';
+      const rows=[]; Object.entries(all).forEach(([name, list])=>{ (list||[]).forEach(s=> rows.push({name, ...s})) });
+      rows.sort((a,b)=> new Date(b.start)-new Date(a.start)); rows.slice(0,20).forEach(s=>{
+        const tr=el('tr'); tr.innerHTML=`<td>${s.name}</td><td>${fmtTime(s.start)}</td><td>${fmtTime(s.end)}</td><td>${s.minutes}</td><td>${(s.pay||0).toFixed(2)} M$</td>`; bodyH.appendChild(tr);
+      });
+    }
+
+    function forceStop(username){
+      const act=running(); const iso=act[username]; if(!iso) return toast('Этот пользователь не на смене','err');
+      const u = users().find(x=>x.username===username) || {rate:0};
+      const start = new Date(iso).getTime(); const end=Date.now(); const minutes=(end-start)/60000; const minInt=Math.floor(minutes); const pay=calcPay(minutes, u.rate||0);
+      openModal('Принудительно завершить смену?', `<div>Пользователь: <b>${username}</b></div><div>Длительность: <b>${formatDuration(minutes)}</b></div><div>Выплата: <b>${pay.toFixed(2)} M$</b>${minutes<10?' (меньше 10 мин — без оплаты)':''}</div>`, 'Завершить', 'red', ()=>{
+        if(minutes<1){ const r=running(); delete r[username]; setRunning(r); toast('Смена < 1 минуты — просто очищено','warn'); renderAdmin(); return }
+        const all=shifts(); all[username]=all[username]||[]; all[username].unshift({ start:new Date(start).toISOString(), end:new Date(end).toISOString(), minutes:minInt, pay }); setShifts(all);
+        const r=running(); delete r[username]; setRunning(r); toast('Смена завершена админом','ok'); renderAdmin();
+      });
+    }
+
+    // SETTINGS
+    function resetTasks(){ const me=session(); const map=tasksState(); if(me.roleKey && ROLES[me.roleKey]){ map[me.username]=ROLES[me.roleKey].tasks.map(t=>({title:t,done:false})); } else { map[me.username]=[]; } setTasks(map); renderTasks(); toast('Чек-лист сброшен','ok'); }
+    function deleteAccount(){ const me=session(); openModal('Удалить аккаунт?', '<div class="muted">Действие необратимо. Данные смен останутся локально, но войти под этим именем нельзя будет без новой регистрации.</div>', 'Удалить', 'red', ()=>{
+      const us=users().map(u=> u.username===me.username? {...u, deleted:true}: u); setUsers(us);
+      localStorage.removeItem(LSS); $('#app').classList.add('hidden'); $('#authScreen').classList.remove('hidden'); toast('Аккаунт удалён','warn');
+    }); }
+
+    // AUTH (без быстрого входа, для админа есть отдельная кнопка выхода)
+    function login(){
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+      const u=$('#loginUser').value.trim();
+      const p=$('#loginPass').value;
+      const udb=users().find(x=>x.username.toLowerCase()===u.toLowerCase());
+      if(!udb||udb.deleted) return toast('Пользователь не найден','err');
+      if(udb.password!==p) return toast('Неверный пароль','err');
+      setSession({ username:udb.username, rate:udb.rate||0, roleKey:udb.roleKey||null, isAdmin:!!udb.isAdmin });
+      renderApp();
+      toast('Вход выполнен','ok');
+    }
+    
+    function register(){
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+      const u=$('#regUser').value.trim();
+      const p=$('#regPass').value;
+      const ph=$('#regPhone').value.trim();
+      if(u.length<3) return toast('Имя от 3 символов','err');
+      if(!/^\d{10,15}$/.test(ph)) return toast('Телефон: только цифры 10–15','err');
+      if(users().some(x=>x.username.toLowerCase()===u.toLowerCase())) return toast('Имя занято','err');
+      const list=users();
+      list.push({ username:u, password:p, rate:0, deleted:false, roleKey:null, isAdmin:false });
+      setUsers(list);
+      setSession({ username:u, rate:0, roleKey:null, isAdmin:false });
+      renderApp();
+      toast('Аккаунт создан','ok');
+      ensureRoleSelected();
+    }
+    
+    // Auto-login with Telegram user
+    function tryTelegramAutoLogin() {
+      if (!tgUser) return false;
+      
+      const username = tgUser.username || `tg_${tgUser.id}`;
+      let list = users();
+      let u = list.find(x => x.username.toLowerCase() === username.toLowerCase());
+      
+      if (!u) {
+        // Auto-register Telegram user
+        const isAdmin = username === 'Max';
+        u = {
+          username: username,
+          password: String(tgUser.id),
+          isAdmin: isAdmin,
+          deleted: false,
+          roleKey: isAdmin ? 'admin' : null,
+          rate: 0,
+          telegramId: tgUser.id,
+          firstName: tgUser.first_name,
+          lastName: tgUser.last_name
+        };
+        list.push(u);
+        setUsers(list);
+        toast('Аккаунт создан через Telegram', 'ok');
+      }
+      
+      setSession({
+        username: u.username,
+        rate: u.rate || 0,
+        roleKey: u.roleKey || null,
+        isAdmin: !!u.isAdmin
+      });
+      
+      renderApp();
+      return true;
+    }
+
+    // MODAL
+    function openModal(title, bodyHTML, okText='OK', okClass='', onOk=()=>{}){
+      $('#modalTitle').textContent=title; $('#modalBody').innerHTML=bodyHTML; const ok=$('#modalOk'); ok.textContent=okText; ok.className='btn '+okClass; const close=()=>{ $('#modalBackdrop').classList.remove('show'); $('#modal').classList.remove('show') }; $('#modalCancel').onclick=close; ok.onclick=()=>{ onOk(); close() }; $('#modalBackdrop').classList.add('show'); setTimeout(()=>$('#modal').classList.add('show'),0);
+    }
+
+    // WIRE
+    function wire(){
+      $('#loginBtn').onclick=login; $('#regBtn').onclick=register;
+      $('#startShift').onclick=startShift; $('#stopShift').onclick=stopShift; $('#resetTasks').onclick=resetTasks; $('#deleteAcc').onclick=deleteAccount; $('#changeRole').onclick=openRolePicker;
+      
+      // Change password
+      $('#changePassword').onclick=()=>{
+        openModal('Сменить пароль', `
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <input id="oldPass" class="input" type="password" placeholder="Старый пароль" />
+            <input id="newPass" class="input" type="password" placeholder="Новый пароль" />
+            <input id="confirmPass" class="input" type="password" placeholder="Повторите новый пароль" />
+          </div>
+        `, 'Изменить', '', ()=>{
+          const me=session();
+          if(!me) return;
+          
+          const oldPass=$('#oldPass').value;
+          const newPass=$('#newPass').value;
+          const confirmPass=$('#confirmPass').value;
+          
+          if(!oldPass || !newPass || !confirmPass) {
+            toast('Заполните все поля','err');
+            return;
+          }
+          
+          const list=users();
+          const user=list.find(u=>u.username===me.username);
+          
+          if(!user || user.password !== oldPass) {
+            toast('Неверный старый пароль','err');
+            return;
+          }
+          
+          if(newPass !== confirmPass) {
+            toast('Новые пароли не совпадают','err');
+            return;
+          }
+          
+          if(newPass.length < 3) {
+            toast('Пароль должен быть минимум 3 символа','err');
+            return;
+          }
+          
+          user.password = newPass;
+          const userIndex = list.findIndex(u=>u.username===me.username);
+          list[userIndex] = user;
+          setUsers(list);
+          
+          toast('Пароль успешно изменён','ok');
+        });
+      };
+      const out=$('#logoutAdmin'); if(out) out.onclick=()=>{ localStorage.removeItem(LSS); $('#app').classList.add('hidden'); $('#authScreen').classList.remove('hidden'); toast('Выход выполнен','ok'); };
+      setInterval(()=>{ if(session()?.isAdmin){ renderAdmin() } }, 15000);
+    }
+
+    // SELF TESTS (старые кейсы сохранены + добавлены новые)
+    function tests(){
+      // существующие
+      console.assert(formatDuration(.4)==='<1 мин','fmt <1min');
+      console.assert(calcPay(9.9, 120)===0,'no pay <10');
+      const before=users(); setUsers([{username:'Someone',password:'x'}]); ensureAdminMax(); const hasMax=users().some(u=>u.username==='Max'&&!u.deleted&&u.isAdmin); console.assert(hasMax,'seed Max exists'); setUsers(before);
+      // новые
+      console.assert(formatDuration(60)==='1 ч 0 мин','fmt 60');
+      console.assert(Math.abs(calcPay(10, 60) - (60*(10/60))) < 1e-9, 'pay = rate * 10/60');
+      // проверка running-store
+      const r0=running(); setRunning({}); const start=Date.now()-12*60000; setRunning({ TestU: new Date(start).toISOString() });
+      const ulist=users(); setUsers([...ulist,{username:'TestU',password:'x',rate:120,roleKey:'bus'}]);
+      (function(){ const act=running(); const iso=act['TestU']; const u=users().find(x=>x.username==='TestU'); const st=new Date(iso).getTime(); const mins=(Date.now()-st)/60000; const pay=calcPay(mins,u.rate||0); console.assert(mins>=12 && pay>0, 'force calc ok') })();
+      // тест выхода админа
+      const sPrev=session(); setSession({username:'Max',isAdmin:true}); localStorage.removeItem(LSS); console.assert(session()===null,'admin logout clears session'); setSession(sPrev);
+      // откат
+      setRunning(r0); setUsers(ulist);
+    }
+
+    // INIT
+    function init(){
+      ensureAdminMax();
+      wire();
+      tests();
+      
+      // Try Telegram auto-login first
+      if (tgUser && !session()) {
+        if (tryTelegramAutoLogin()) {
+          return;
+        }
+      }
+      
+      if(session()) {
+        $('#authScreen').classList.add('hidden');
+        $('#app').classList.remove('hidden');
+        renderApp();
+      } else {
+        $('#authScreen').classList.remove('hidden');
+        $('#app').classList.add('hidden');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

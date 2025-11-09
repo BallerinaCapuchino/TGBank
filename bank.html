@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>MTBank — Telegram Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root{
+      --bg:#0f1216; --panel:#171b21; --panel-2:#1d232b; --text:#e9eef5; --muted:#a5b1c2;
+      --blue:#3aa0ff; --blue-2:#2589e6; --green:#35c46a; --red:#ff4d4f; --amber:#f5a524;
+      --shadow: 0 20px 40px rgba(0,0,0,.35), 0 4px 12px rgba(0,0,0,.35); --radius: 18px;
+    }
+    html,body{height:100%}
+    body{margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;
+      background: radial-gradient(1200px 800px at 80% -10%, rgba(58,160,255,.08), transparent 50%),
+                  radial-gradient(900px 600px at -10% 110%, rgba(53,196,106,.07), transparent 50%), var(--bg);
+      color:var(--text);
+    }
+    .hidden{display:none!important}
+    .wrap{max-width:1200px;margin:0 auto;padding:24px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0)),var(--panel); border:1px solid rgba(255,255,255,.06); border-radius:var(--radius); box-shadow:var(--shadow)}
+    .panel{padding:20px}
+    .btn{background:var(--blue); color:#fff; border:0; border-radius:14px; padding:12px 16px; font-weight:700; box-shadow:0 8px 20px rgba(58,160,255,.25); cursor:pointer; transition:.15s ease}
+    .btn:hover{background:var(--blue-2); transform:translateY(-1px)} .btn:active{transform:translateY(0)}
+    .btn.small{padding:8px 12px; border-radius:12px; font-weight:600}
+    .btn.ghost{background:transparent; border:1px solid rgba(255,255,255,.1)}
+    .btn.gray{background:#2a3039}
+    .btn.red{background:var(--red)} .btn.green{background:var(--green)} .btn.block{width:100%}
+    .input,.select,.textarea{background:var(--panel-2); border:1px solid rgba(255,255,255,.08); color:var(--text); border-radius:12px; padding:12px 14px; width:100%; outline:none}
+    .input:focus,.textarea:focus{ border-color: rgba(58,160,255,.6); box-shadow: 0 0 0 4px rgba(58,160,255,.15)}
+    .row{display:flex; gap:16px; align-items:stretch} .col{flex:1}
+    .pill{display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; font-size:12px; background:#222833; border:1px solid rgba(255,255,255,.06)}
+    .muted{color:var(--muted)}
+    .status-dot{ width:8px; height:8px; border-radius:50%; background:#6b7280; box-shadow:0 0 0 3px rgba(255,255,255,.04) }
+    .status-online{ background: var(--green) }
+
+    .topbar{ position:sticky; top:0; z-index:20; backdrop-filter: blur(8px); background: rgba(15,18,22,.65); border-bottom:1px solid rgba(255,255,255,.06)}
+    .topbar-inner{ max-width:1200px; margin:0 auto; display:flex; align-items:center; gap:16px; padding:14px 24px }
+    .brand{ display:flex; align-items:center; gap:12px; font-weight:800; letter-spacing:.3px }
+    .logo{ width:28px; height:28px; border-radius:7px; background: linear-gradient(135deg, #2589e6, #3aa0ff); box-shadow: inset 0 0 24px rgba(255,255,255,.25), 0 4px 16px rgba(58,160,255,.4)}
+    .grow{flex:1}
+
+    /* === iOS-style Exit Indicator === */
+    .ios-exit-indicator {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 5px;
+      background: rgba(255, 255, 255, .3);
+      border-radius: 0 0 8px 8px;
+      z-index: 100;
+      cursor: pointer;
+      transition: all .3s ease;
+    }
+    .ios-exit-indicator:hover {
+      height: 8px;
+      background: rgba(255, 255, 255, .5);
+    }
+    .ios-exit-indicator.dragging {
+      height: 30px;
+      background: linear-gradient(180deg, rgba(255, 77, 79, .7), rgba(255, 77, 79, .4));
+    }
+
+    .auth-wrap{ min-height: 100dvh; display:grid; place-items:center; padding:32px }
+    .auth{ width:min(860px,100%); display:grid; grid-template-columns: 1.1fr .9fr; gap:24px; padding:24px }
+    .auth .left{ padding:28px } .auth .right{ padding:28px; background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0)), var(--panel-2); border:1px solid rgba(255,255,255,.06); border-radius:var(--radius)}
+    .big{ font-size:36px; line-height:1.1; margin:0 0 8px } .sub{ margin:0 0 20px; color:var(--muted) }
+
+    .main{ max-width:1200px; margin: 20px auto; padding: 0 24px 40px }
+    .grid{ display:grid; grid-template-columns: 1.4fr 1fr; gap:20px }
+    .grid-3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px }
+
+    .panel h3{ margin:0 0 12px }
+    .list{ display:flex; flex-direction:column; gap:10px }
+    .list-item{ display:flex; align-items:center; gap:12px; justify-content:space-between; padding:12px; background: var(--panel-2); border:1px solid rgba(255,255,255,.06); border-radius:14px }
+
+    table{ width:100%; border-collapse: collapse }
+    th, td{ padding:10px 8px; border-bottom:1px solid rgba(255,255,255,.06); text-align:left; font-size:14px }
+    th{ color: var(--muted); font-weight:600 }
+
+    .modal-backdrop{ position: fixed; inset:0; background: rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:50 }
+    .modal{ width:min(520px, 94%); background: var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:18px; box-shadow: var(--shadow); transform: translateY(10px) scale(.98); opacity:0; transition:.2s ease }
+    .modal.show{ transform: translateY(0) scale(1); opacity:1 } .modal-backdrop.show{ display:flex }
+    .modal header{ padding:18px 20px; border-bottom:1px solid rgba(255,255,255,.06); font-weight:800 }
+    .modal main{ padding:20px; display:flex; flex-direction:column; gap:12px }
+    .modal footer{ padding:16px 20px; display:flex; gap:12px; justify-content:flex-end; border-top:1px solid rgba(255,255,255,.06) }
+
+    #toasts{ position: fixed; right: 18px; bottom: 18px; display:flex; flex-direction:column; gap:10px; z-index:60 }
+    .toast{ background: var(--panel); border:1px solid rgba(255,255,255,.08); border-left:4px solid var(--blue); padding:12px 14px; border-radius:12px; box-shadow: var(--shadow); min-width: 260px; animation: slideIn .35s ease both }
+    .toast.ok{ border-left-color: var(--green) } .toast.warn{ border-left-color: var(--amber) } .toast.err{ border-left-color: var(--red) }
+    @keyframes slideIn{ from{ transform: translateY(12px); opacity:0 } to{ transform: translateY(0); opacity:1 } }
+
+    /* === SWIPE CONFIRM === */
+    .swipe-wrap{ user-select:none; -webkit-user-select:none }
+    .swipe-title{ margin-bottom:8px; color:var(--muted) }
+    .swipe-track{ position:relative; height:56px; border-radius:999px; background:linear-gradient(90deg,#1f2630,#202a36); border:1px solid rgba(255,255,255,.08); box-shadow: inset 0 2px 8px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; overflow:hidden }
+    .swipe-label{ pointer-events:none; opacity:.85; transition:opacity .15s ease }
+    .swipe-knob{ position:absolute; left:4px; top:4px; width:48px; height:48px; border-radius:999px; background:var(--blue); box-shadow:0 10px 24px rgba(58,160,255,.35); display:grid; place-items:center; font-size:20px; font-weight:800; color:#fff; cursor:grab; touch-action:none; transition:box-shadow .15s ease }
+    .swipe-knob.drag{ box-shadow:0 12px 28px rgba(58,160,255,.45) }
+    .swipe-knob.done{ background:var(--green) }
+
+    /* === SUCCESS ANIM === */
+    .success-box{ display:flex; flex-direction:column; align-items:center; gap:10px; padding:6px 0 }
+    .success-svg{ width:96px; height:96px }
+    .success-circle{ stroke: var(--green); stroke-width:8; fill:none; stroke-dasharray:314; stroke-dashoffset:314; animation: draw .7s ease forwards }
+    .success-check{ stroke: var(--green); stroke-width:8; fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:100; stroke-dashoffset:100; animation: draw .55s ease .15s forwards }
+    @keyframes draw{ to{ stroke-dashoffset:0 } }
+
+    @media (max-width: 900px){ .auth{ grid-template-columns: 1fr } .grid{ grid-template-columns: 1fr } .grid-3{ grid-template-columns: 1fr } .topbar-inner{ padding:12px 16px } }
+  </style>
+</head>
+<body>
+  <!-- iOS-style Exit Indicator -->
+  <div class="ios-exit-indicator hidden" id="exitIndicator"></div>
+
+  <!-- Topbar -->
+  <div class="topbar hidden" id="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><div class="logo"></div><div class="nowrap">MTBank Prototype v11</div></div>
+      <div class="grow"></div>
+      <div id="devicePill" class="pill hidden"></div>
+      <div class="userbox" style="display:flex;align-items:center;gap:10px">
+        <div id="whoami" class="nowrap"></div>
+        <button class="btn gray small" id="logoutBtn">Выйти</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth -->
+  <div class="auth-wrap" id="authScreen">
+    <div class="auth card">
+      <div class="left">
+        <div style="margin-bottom: 20px;">
+          <button class="btn gray small" onclick="window.location.href='index.html'" style="width: auto;">← Рабочий стол</button>
+        </div>
+        <h1 class="big">Добро пожаловать в MTBank</h1>
+        <p class="sub">Основной банк в нашей экосистеме "MT".</p>
+      </div>
+      <div class="right">
+        <div id="authForms">
+          <div id="loginForm">
+            <h3>Вход</h3>
+            <div style="display:flex; flex-direction:column; gap:10px">
+              <input id="loginUser" class="input" placeholder="Имя пользователя" />
+              <input id="loginPass" class="input" placeholder="Пароль" type="password" />
+              <button id="loginBtn" class="btn">Войти</button>
+            </div>
+            <p class="muted" style="margin-top:10px">Нет аккаунта? <a href="#" id="toRegister">Зарегистрироваться</a></p>
+          </div>
+          <div id="registerForm" class="hidden">
+            <h3>Регистрация</h3>
+            <div style="display:flex; flex-direction:column; gap:10px">
+              <input id="regUser" class="input" placeholder="Уникальное имя" />
+              <input id="regPass" class="input" placeholder="Пароль" type="password" />
+              <button id="regBtn" class="btn">Создать аккаунт</button>
+            </div>
+            <p class="muted" style="margin-top:10px">Уже есть аккаунт? <a href="#" id="toLogin">Войти</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin View -->
+  <div id="adminView" class="main hidden">
+    <div class="grid">
+      <div class="card panel">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px">
+          <h3 style="margin:0">Пользователи</h3>
+          <div class="pill"><span style="width:8px;height:8px;border-radius:50%;background:var(--green)"></span> Панель администратора</div>
+        </div>
+        <div id="usersList" class="list"></div>
+      </div>
+      <div class="card panel">
+        <h3>Статистика банка</h3>
+        <div class="grid-3">
+          <div class="card panel">
+            <div class="muted">Пользователей</div>
+            <div id="statUsers" style="font-size:28px; font-weight:800">—</div>
+          </div>
+          <div class="card panel">
+            <div class="muted">Общий баланс</div>
+            <div id="statSupply" style="font-size:28px; font-weight:800">—</div>
+          </div>
+          <div class="card panel">
+            <div class="muted">Оборот за всё время</div>
+            <div id="statTurnover" style="font-size:28px; font-weight:800">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card panel" style="margin-top:20px">
+      <h3>Лента операций</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Время</th><th>От кого</th><th>Кому</th><th>Сумма</th><th>Комментарий</th></tr></thead>
+          <tbody id="adminHistory"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- User View -->
+  <div id="userView" class="main hidden">
+    <div class="grid">
+      <div class="card panel">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px">
+          <h3 style="margin:0">Баланс: <span id="userBalance">—</span></h3>
+          <div id="userStatusPill" class="pill"><span class="status-dot status-online"></span><span id="onlineText">Онлайн</span></div>
+        </div>
+        <div style="margin-top:12px" id="notifArea" class="hidden">
+          <div class="toast ok" id="lastAdminNote">—</div>
+        </div>
+        <div style="margin-top:16px" class="row">
+          <button class="btn green" id="refreshUser">Обновить</button>
+        </div>
+      </div>
+      <div class="card panel">
+        <h3>Личная статистика</h3>
+        <div class="grid-3">
+          <div class="card panel"><div class="muted">Получено</div><div id="statIn" style="font-size:26px; font-weight:800">—</div></div>
+          <div class="card panel"><div class="muted">Отправлено</div><div id="statOut" style="font-size:26px; font-weight:800">—</div></div>
+          <div class="card panel"><div class="muted">Операций</div><div id="statOps" style="font-size:26px; font-weight:800">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:20px">
+      <div class="card panel">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px">
+          <h3 style="margin:0">Переводы</h3>
+          <div class="pill">Подтверждение свайпом</div>
+        </div>
+        <p class="muted">Выберите получателя из списка и нажмите «Отправить».</p>
+        <div id="recipients" class="list"></div>
+      </div>
+      <div class="card panel">
+        <h3>История</h3>
+        <div style="display:flex; gap:8px; margin-bottom:8px">
+          <button class="btn gray small" data-filter="all">Все</button>
+          <button class="btn gray small" data-filter="in">Входящие</button>
+          <button class="btn gray small" data-filter="out">Исходящие</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Время</th><th>От кого</th><th>Кому</th><th>Сумма</th><th>Комментарий</th></tr></thead>
+            <tbody id="userHistory"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card panel" id="settingsCard" style="margin-top:20px">
+      <h3>Настройки</h3>
+      <p class="muted">Управление аккаунтом</p>
+      <div style="display:flex; gap:12px; flex-wrap:wrap">
+        <button class="btn" id="changePassword">Сменить пароль</button>
+        <button class="btn red" id="deleteMe">Удалить аккаунт</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div class="modal" id="modal">
+      <header id="modalTitle">Подтверждение</header>
+      <main id="modalBody"></main>
+      <footer>
+        <button class="btn ghost" id="modalCancel">Отмена</button>
+        <button class="btn" id="modalOk">Подтвердить</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toasts"></div>
+
+  <script>
+  // Telegram Web App initialization
+  const tg = window.Telegram?.WebApp;
+  let tgUser = null;
+  
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    tg.enableClosingConfirmation();
+    
+    // Get Telegram user
+    const initData = tg.initDataUnsafe;
+    if (initData?.user) {
+      tgUser = initData.user;
+      localStorage.setItem('tg_user', JSON.stringify(tgUser));
+    } else {
+      const stored = localStorage.getItem('tg_user');
+      if (stored) tgUser = JSON.parse(stored);
+    }
+    
+    // Setup back button
+    tg.BackButton.show();
+    tg.BackButton.onClick(() => {
+      window.location.href = 'index.html';
+    });
+    
+    // Apply theme
+    if (tg.themeParams.bg_color) {
+      document.documentElement.style.setProperty('--bg', tg.themeParams.bg_color);
+      document.documentElement.style.setProperty('--panel', tg.themeParams.secondary_bg_color || '#171b21');
+      document.documentElement.style.setProperty('--text', tg.themeParams.text_color || '#e9eef5');
+    }
+  }
+
+  const CURRENCY = 'M$';
+  const LS_USERS = 'msbank_users_v11';
+  const LS_HISTORY = 'msbank_history_v11';
+  const LS_NOTES = 'msbank_notes_v11';
+  const LS_SESSION = 'msbank_session_v11';
+
+  const $ = sel => document.querySelector(sel);
+  const el = (tag, cls) => { const n = document.createElement(tag); if (cls) n.className = cls; return n };
+  const fmt = n => new Intl.NumberFormat('ru-RU').format(n);
+  const nowISO = () => new Date().toISOString();
+  const niceTime = iso => new Date(iso).toLocaleString('ru-RU');
+
+  const toast = (msg, type='ok', timeout=2600) => {
+    const box = $('#toasts');
+    const t = el('div','toast ' + (type||''));
+    t.textContent = msg; box.appendChild(t);
+    setTimeout(()=>{ t.style.opacity=.0; t.style.transform='translateY(8px)'; setTimeout(()=>t.remove(), 350)}, timeout);
+  };
+
+  // Modal with onClose + external closeModal() compatibility
+  const modal = {
+    open({title='Подтверждение', bodyHTML='', okText='Подтвердить', okClass='', onOk=()=>{}, onClose=()=>{}, autoClose=true}){
+      $('#modalTitle').textContent = title;
+      $('#modalBody').innerHTML = bodyHTML;
+      const ok = $('#modalOk'); ok.textContent = okText; ok.className = 'btn ' + okClass;
+      const doClose = ()=>{ $('#modalBackdrop').classList.remove('show'); $('#modal').classList.remove('show'); try{ onClose(); }catch(e){} };
+      ok.disabled = false; ok.onclick = async ()=>{
+        ok.disabled = true;
+        try{
+          const result = await onOk();
+          // If onOk returns false, don't auto-close
+          if (autoClose && result !== false) {
+            doClose();
+          }
+        } catch(e) {
+          if (autoClose) doClose();
+        } finally {
+          ok.disabled = false;
+        }
+      };
+      $('#modalCancel').onclick = doClose;
+      window.__modalClose = doClose; // for closeModal()
+      $('#modalBackdrop').classList.add('show');
+      setTimeout(()=> $('#modal').classList.add('show'), 0);
+      return { close: doClose };
+    }
+  };
+  function closeModal(){ if (window.__modalClose) window.__modalClose(); }
+
+  function load(key, fallback){ try{ const s = localStorage.getItem(key); return s? JSON.parse(s): fallback }catch(e){ return fallback } }
+  function save(key, value){ localStorage.setItem(key, JSON.stringify(value)) }
+
+  function seed(){
+    if(!load(LS_USERS)){
+      const users = [
+        { username:'Max', password:'12345', isAdmin:true, balance:0, online:false, deleted:false }
+      ];
+      save(LS_USERS, users);
+    }
+    if(!load(LS_HISTORY)) save(LS_HISTORY, []);
+    if(!load(LS_NOTES)) save(LS_NOTES, {});
+  }
+
+  function getUsers(){ return load(LS_USERS, []) }
+  function setUsers(u){ save(LS_USERS, u) }
+  function getHistory(){ return load(LS_HISTORY, []) }
+  function setHistory(h){ save(LS_HISTORY, h) }
+  function getNotes(){ return load(LS_NOTES, {}) }
+  function setNotes(n){ save(LS_NOTES, n) }
+
+  function current(){ return load(LS_SESSION, null) }
+  function setCurrent(u){ save(LS_SESSION, u) }
+
+  function isMobile(){ return window.innerWidth < 860 || /Mobi|Android/i.test(navigator.userAgent) }
+
+  function findUser(name){ return getUsers().find(u=>u.username.toLowerCase() === String(name||'').toLowerCase()) }
+  function uniqueName(name){ return !getUsers().some(u=>u.username.toLowerCase() === name.toLowerCase()) }
+
+  function creditByAdmin(toUser, amount, comment){
+    const users = getUsers();
+    const u = users.find(x=>x.username === toUser);
+    if(!u || u.deleted) throw new Error('Пользователь не найден');
+    const amt = Math.max(0, Math.floor(+amount));
+    if(!amt) throw new Error('Сумма должна быть > 0');
+    u.balance += amt; setUsers(users);
+    const h = getHistory();
+    h.unshift({ id: crypto.randomUUID(), time: nowISO(), from:'АДМИН', to:u.username, amount: amt, comment: comment||'', type:'admin_credit' });
+    setHistory(h);
+    const notes = getNotes();
+    notes[u.username] = notes[u.username] || [];
+    notes[u.username].push({ id: crypto.randomUUID(), createdAt: nowISO(), text: `Вам начислено ${fmt(amt)} ${CURRENCY} от администратора. Комментарий: ${comment||'—'}` , read:false });
+    setNotes(notes);
+  }
+
+  function transfer(fromName, toName, amount, comment){
+    const users = getUsers();
+    const from = users.find(x=>x.username === fromName);
+    const to = users.find(x=>x.username === toName);
+    if(!from || from.deleted) throw new Error('Отправитель не найден');
+    if(!to || to.deleted) throw new Error('Получатель не найден');
+    const amt = Math.max(0, Math.floor(+amount));
+    if(!amt) throw new Error('Сумма должна быть > 0');
+    if(from.balance < amt) throw new Error('Недостаточно средств');
+    from.balance -= amt; to.balance += amt; setUsers(users);
+    const h = getHistory();
+    h.unshift({ id: crypto.randomUUID(), time: nowISO(), from: from.username, to: to.username, amount: amt, comment: comment||'', type:'transfer' });
+    setHistory(h);
+  }
+
+  function removeAccount(name){
+    const users = getUsers();
+    const u = users.find(x=>x.username === name);
+    if(!u) return; u.deleted = true; u.online = false; setUsers(users);
+  }
+
+  function markOnline(name, online){
+    const users = getUsers();
+    const u = users.find(x=>x.username === name);
+    if(u){ u.online = !!online; setUsers(users); }
+  }
+
+  function bankStats(){
+    const users = getUsers().filter(u=>!u.deleted);
+    const supply = users.reduce((s,u)=>s+u.balance,0);
+    const turnover = getHistory().reduce((s,o)=> s + (o.amount||0), 0);
+    return { users: users.length, supply, turnover };
+  }
+
+  function showTopbar(u){
+    $('#topbar').classList.remove('hidden');
+    $('#whoami').textContent = u.isAdmin ? 'Max (АДМИН)' : u.username;
+    const pill = $('#devicePill'); pill.textContent = isMobile()? 'Мобильный режим' : 'Десктопный режим'; pill.classList.remove('hidden');
+  }
+  function hideTopbar(){ $('#topbar').classList.add('hidden') }
+
+  function renderUsersList(){
+    const box = $('#usersList'); box.innerHTML = '';
+    getUsers().filter(u=>!u.isAdmin && !u.deleted).forEach(u=>{
+      const row = el('div','list-item');
+      const left = el('div'); left.style.display='flex'; left.style.alignItems='center'; left.style.gap='10px';
+      const dot = el('span','status-dot ' + (u.online? 'status-online':'') );
+      const name = el('div'); name.innerHTML = `<b>${u.username}</b> <span class="pill">Баланс: ${fmt(u.balance)} ${CURRENCY}</span>`;
+      left.append(dot,name);
+      const right = el('div'); right.style.display='flex'; right.style.gap='8px';
+      const btn = el('button','btn small'); btn.textContent = 'Выдать';
+      btn.onclick = ()=>
+        modal.open({ title:`Выдать ${u.username}`, okText:'Начислить', okClass:'green', bodyHTML:
+          `<label>Сумма</label><input id="payAmt" class="input" type="number" min="1" placeholder="100" />
+           <label>Комментарий</label><input id="payCmt" class="input" placeholder="За что начисление" />`,
+          onOk: ()=>{
+            const amt = +$('#payAmt').value || 0;
+            const cmt = $('#payCmt').value || '';
+            try{ creditByAdmin(u.username, amt, cmt); toast(`Начислено ${fmt(amt)} ${CURRENCY} пользователю ${u.username}`,'ok'); renderUsersList(); renderAdminHistory(); renderAdminStats(); }
+            catch(e){ toast(e.message,'err'); }
+          }
+        });
+      right.append(btn); row.append(left,right); box.appendChild(row);
+    })
+  }
+
+  function renderAdminStats(){ const {users, supply, turnover} = bankStats(); $('#statUsers').textContent = users; $('#statSupply').textContent = `${fmt(supply)} ${CURRENCY}`; $('#statTurnover').textContent = `${fmt(turnover)} ${CURRENCY}`; }
+  function renderAdminHistory(){ const tbody = $('#adminHistory'); tbody.innerHTML = ''; getHistory().slice(0,50).forEach(o=>{ const tr = el('tr'); const from = (o.from==='АДМИН')? 'АДМИН' : o.from; tr.innerHTML = `<td>${niceTime(o.time)}</td><td>${from}</td><td>${o.to}</td><td>${fmt(o.amount)} ${CURRENCY}</td><td>${o.comment||'—'}</td>`; tbody.appendChild(tr); }); }
+
+  // === SWIPE: утилиты (FIXED with safe capture + teardown) ===
+  function initSwipe(box, onDone){
+    const track = box.querySelector('.swipe-track');
+    const knob  = box.querySelector('.swipe-knob');
+    const label = box.querySelector('.swipe-label');
+    if(!track || !knob) return ()=>{};
+
+    const max = () => track.clientWidth - knob.clientWidth - 8; // реальный максимум
+    let start = 0; let x = 0; let act = false; let pid = null; let captured = false; let destroyed = false;
+
+    const clamp = (v,min,max)=> v<min?min: (v>max?max:v);
+    const setX = (v)=>{ x = clamp(v, 0, max()); knob.style.transform = `translateX(${x}px)`; const p = max()? (x/max()) : 0; label.style.opacity = 0.85 + 0.15*p; };
+
+    const releaseCapture = ()=>{
+      if(!pid) return;
+      try{
+        if(knob.hasPointerCapture && knob.hasPointerCapture(pid)) knob.releasePointerCapture(pid);
+      }catch(_){ /* no-op */ }
+    };
+
+    const reset = ()=>{ act=false; setX(0); knob.classList.remove('done','drag'); knob.style.cursor='grab'; releaseCapture(); };
+
+    const down = (e)=>{ if(destroyed) return; act=true; pid=e.pointerId; captured=false; start=e.clientX - x; knob.style.cursor='grabbing'; knob.classList.add('drag'); e.preventDefault();
+      if(knob.setPointerCapture){ try{ knob.setPointerCapture(pid); captured = knob.hasPointerCapture ? knob.hasPointerCapture(pid) : true; }catch(_){ captured=false; } }
+    };
+    const move = (e)=>{ if(!act || e.pointerId!==pid || destroyed) return; setX(e.clientX - start); if(x >= max()*0.92){ knob.classList.add('done'); act=false; knob.style.pointerEvents='none'; setTimeout(()=>{ try{ onDone&&onDone(); } finally { knob.style.pointerEvents=''; } }, 80); } };
+    const up   = (e)=>{ if(destroyed) return; if(e.pointerId!==pid){ return; } if(act){ reset(); } act=false; releaseCapture(); };
+    const cancel = ()=>{ if(destroyed) return; reset(); };
+    const lost = ()=>{ if(destroyed) return; reset(); };
+
+    knob.addEventListener('pointerdown', down);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    knob.addEventListener('pointercancel', cancel);
+    knob.addEventListener('lostpointercapture', lost);
+
+    // На скрытие/закрытие модалки — аккуратный сброс
+    const onVis = ()=>{ if(document.hidden) reset(); };
+    document.addEventListener('visibilitychange', onVis);
+
+    // Вернём функцию снятия слушателей, чтобы модалка могла зачистить
+    return function destroy(){
+      if(destroyed) return; destroyed = true;
+      try{ reset(); }catch(_){ }
+      knob.removeEventListener('pointerdown', down);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      knob.removeEventListener('pointercancel', cancel);
+      knob.removeEventListener('lostpointercapture', lost);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }
+
+  function showSuccess(amount, toUser){
+    modal.open({ title:'Перевод выполнен', okText:'Готово', okClass:'green', bodyHTML:
+      `<div class="success-box">
+         <svg class="success-svg" viewBox="0 0 120 120">
+           <circle class="success-circle" cx="60" cy="60" r="50" />
+           <path class="success-check" d="M38 64 L54 78 L84 46" />
+         </svg>
+         <div style="font-size:18px; font-weight:800">− ${fmt(amount)} ${CURRENCY}</div>
+         <div class="muted">Получатель: <b>${toUser}</b></div>
+       </div>`
+    });
+  }
+
+  function openSwipeConfirm({amount, toUser, onConfirm}){
+    let teardown = ()=>{};
+    modal.open({ title:'Подтверждение переводом', okText:'Отмена', bodyHTML:
+      `<div class="swipe-wrap">
+         <div class="muted swipe-title">Проведите вправо, чтобы отправить</div>
+         <div class="swipe-track">
+           <div class="swipe-label">Отправить ${fmt(amount)} ${CURRENCY} → ${toUser}</div>
+           <div class="swipe-knob">➜</div>
+         </div>
+       </div>`,
+      onClose: ()=>{ try{ teardown(); }catch(_){ } }
+    });
+    // инициализируем свайп после рендера
+    setTimeout(()=>{
+      const box = $('#modalBody .swipe-wrap');
+      teardown = initSwipe(box, ()=>{ closeModal(); try{ onConfirm&&onConfirm(); } finally { try{ teardown(); }catch(_){ } } });
+    },0);
+  }
+
+  function renderRecipients(){
+    const box = $('#recipients'); box.innerHTML = '';
+    const me = current();
+    getUsers().filter(u=>!u.deleted && u.username!==me.username).forEach(u=>{
+      const row = el('div','list-item');
+      const left = el('div'); left.style.display='flex'; left.style.alignItems='center'; left.style.gap='10px';
+      const dot = el('span','status-dot ' + (u.online? 'status-online':'') );
+      const name = el('div'); name.innerHTML = `<b>${u.username}</b>`; // скрываем чужие балансы
+      left.append(dot,name);
+      const right = el('div');
+      const btn = el('button','btn small'); btn.textContent = 'Отправить';
+      btn.onclick = ()=>{
+        modal.open({
+          title:`Перевод ${u.username}`,
+          okText:'Далее',
+          autoClose: false,
+          bodyHTML:
+          `<div class="muted">С вашего баланса: <b>${fmt(findUser(me.username).balance)}</b> ${CURRENCY}</div>
+           <label>Сумма</label><input id="trAmt" class="input" type="number" min="1" placeholder="50" />
+           <label>Комментарий</label><input id="trCmt" class="input" placeholder="За что" />`,
+          onOk: ()=>{
+            const amt = +$('#trAmt').value || 0;
+            const cmt = $('#trCmt').value || '';
+            // предпросмотрные проверки, чтобы не открывать свайп зря
+            try{
+              const bal = findUser(me.username).balance;
+              if(!(amt>0)) throw new Error('Введите сумму');
+              if(bal < amt) throw new Error('Недостаточно средств');
+              // Close first modal before opening swipe
+              closeModal();
+              // шаг 2: свайп подтверждение
+              setTimeout(() => {
+                openSwipeConfirm({ amount: amt, toUser: u.username, onConfirm: ()=>{
+                  try{ transfer(me.username, u.username, amt, cmt); refreshSessionUser(); renderRecipients(); renderUserHistory('all'); renderUserHeader(); showSuccess(amt, u.username); }
+                  catch(e){ toast(e.message,'err'); }
+                }});
+              }, 100);
+              return false; // Prevent auto-close
+            }catch(e){
+              toast(e.message,'err');
+              return false;
+            }
+          }
+        })
+      };
+      right.appendChild(btn); row.append(left,right); box.appendChild(row);
+    })
+  }
+
+  function userStats(name){ const h = getHistory(); const incoming = h.filter(o=> (o.to===name)); const outgoing = h.filter(o=> (o.from===name)); return { in: incoming.reduce((s,o)=>s+o.amount,0), out: outgoing.reduce((s,o)=>s+o.amount,0), ops: incoming.length + outgoing.length }; }
+
+  function renderUserHeader(){
+    const me = current();
+    $('#userBalance').textContent = `${fmt(findUser(me.username).balance)} ${CURRENCY}`;
+    const notes = getNotes()[me.username] || [];
+    const unread = notes.filter(n=>!n.read).sort((a,b)=> b.createdAt.localeCompare(a.createdAt));
+    if(unread.length){ $('#notifArea').classList.remove('hidden'); $('#lastAdminNote').textContent = unread[0].text; unread[0].read = true; setNotes(Object.assign(getNotes(), { [me.username]: notes })); } else { $('#notifArea').classList.add('hidden'); }
+    const st = userStats(me.username);
+    $('#statIn').textContent = `${fmt(st.in)} ${CURRENCY}`; $('#statOut').textContent = `${fmt(st.out)} ${CURRENCY}`; $('#statOps').textContent = st.ops;
+  }
+
+  function renderUserHistory(filter='all'){
+    const me = current(); const tbody = $('#userHistory'); tbody.innerHTML = '';
+    const rows = getHistory().filter(o=> o.to===me.username || o.from===me.username);
+    const filtered = rows.filter(o=> filter==='all' || (filter==='in' && o.to===me.username) || (filter==='out' && o.from===me.username));
+    filtered.slice(0,100).forEach(o=>{ const tr = el('tr'); const from = (o.from==='АДМИН')? 'АДМИН' : o.from; tr.innerHTML = `<td>${niceTime(o.time)}</td><td>${from}</td><td>${o.to}</td><td>${fmt(o.amount)} ${CURRENCY}</td><td>${o.comment||'—'}</td>`; tbody.appendChild(tr); });
+  }
+
+  function refreshSessionUser(){ const me = current(); if(!me) return; const fresh = findUser(me.username); if(!fresh || fresh.deleted){ toast('Аккаунт удалён или не найден','err'); logout(); return; } setCurrent(fresh); }
+
+  function showAuth(){ hideTopbar(); $('#authScreen').classList.remove('hidden'); $('#adminView').classList.add('hidden'); $('#userView').classList.add('hidden'); $('#exitIndicator').classList.add('hidden'); }
+  function showAdmin(){ $('#authScreen').classList.add('hidden'); showTopbar(current()); $('#adminView').classList.remove('hidden'); $('#userView').classList.add('hidden'); $('#exitIndicator').classList.remove('hidden'); initExitIndicator(); renderUsersList(); renderAdminStats(); renderAdminHistory(); }
+  function showUser(){ $('#authScreen').classList.add('hidden'); showTopbar(current()); $('#adminView').classList.add('hidden'); $('#userView').classList.remove('hidden'); $('#exitIndicator').classList.remove('hidden'); initExitIndicator(); renderUserHeader(); renderRecipients(); renderUserHistory('all'); }
+
+  // iOS-style exit indicator
+  function initExitIndicator() {
+    const indicator = $('#exitIndicator');
+    if (!indicator) return;
+
+    let startY = 0;
+    let currentY = 0;
+    let dragging = false;
+
+    // Remove old listeners
+    const newIndicator = indicator.cloneNode(true);
+    indicator.parentNode.replaceChild(newIndicator, indicator);
+    const ind = $('#exitIndicator');
+
+    ind.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      startY = e.clientY;
+      currentY = 0;
+      ind.classList.add('dragging');
+      e.preventDefault();
+    });
+
+    document.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      currentY = Math.max(0, e.clientY - startY);
+      
+      if (currentY > 100) {
+        dragging = false;
+        ind.classList.remove('dragging');
+        logout();
+      }
+    });
+
+    document.addEventListener('pointerup', () => {
+      if (!dragging) return;
+      dragging = false;
+      ind.classList.remove('dragging');
+    });
+  }
+
+  function login(username, password){
+    if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    const u = findUser(username);
+    if(!u || u.deleted){ toast('Пользователь не найден','err'); return }
+    if(u.password !== password){ toast('Неверный пароль','err'); return }
+    markOnline(u.username, true); setCurrent(u);
+    toast(`Вход выполнен: ${u.isAdmin? 'АДМИН' : u.username}`,'ok');
+    if(u.isAdmin) showAdmin(); else showUser();
+  }
+  
+  function logout(){
+    if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+    const me = current();
+    if(me) markOnline(me.username, false);
+    localStorage.removeItem(LS_SESSION);
+    showAuth();
+  }
+
+  function register(username, password){
+    username = (username||'').trim();
+    if(username.length < 3) throw new Error('Имя должно быть не короче 3 символов');
+    if(!uniqueName(username)) throw new Error('Такое имя уже занято');
+    const users = getUsers();
+    users.push({ username, password: String(password||''), isAdmin:false, balance: 100, online:false, deleted:false });
+    setUsers(users);
+  }
+  
+  // Auto-login with Telegram user
+  function tryTelegramAutoLogin() {
+    if (!tgUser) return false;
+    
+    const username = tgUser.username || `tg_${tgUser.id}`;
+    let u = findUser(username);
+    
+    if (!u) {
+      // Auto-register Telegram user
+      const users = getUsers();
+      const isFirstUser = users.length === 0 || users.every(usr => usr.deleted);
+      u = {
+        username: username,
+        password: String(tgUser.id), // Use Telegram ID as password
+        isAdmin: isFirstUser && username === 'Max',
+        balance: isFirstUser ? 0 : 100,
+        online: true,
+        deleted: false,
+        telegramId: tgUser.id,
+        firstName: tgUser.first_name,
+        lastName: tgUser.last_name
+      };
+      users.push(u);
+      setUsers(users);
+      toast('Аккаунт создан автоматически через Telegram', 'ok');
+    }
+    
+    markOnline(u.username, true);
+    setCurrent(u);
+    
+    if(u.isAdmin) showAdmin();
+    else showUser();
+    
+    return true;
+  }
+
+  function wire(){
+    const pill = $('#devicePill'); const setPill = ()=>{ pill.textContent = isMobile()? 'Мобильный режим' : 'Десктопный режим' }; window.addEventListener('resize', setPill);
+    $('#logoutBtn').onclick = logout;
+    $('#toRegister').onclick = (e)=>{ e.preventDefault(); $('#loginForm').classList.add('hidden'); $('#registerForm').classList.remove('hidden') };
+    $('#toLogin').onclick = (e)=>{ e.preventDefault(); $('#registerForm').classList.add('hidden'); $('#loginForm').classList.remove('hidden') };
+    $('#loginBtn').onclick = ()=> login($('#loginUser').value, $('#loginPass').value);
+    $('#regBtn').onclick = ()=>{ try{ register($('#regUser').value, $('#regPass').value); toast('Аккаунт создан','ok'); $('#registerForm').classList.add('hidden'); $('#loginForm').classList.remove('hidden'); $('#loginUser').value = $('#regUser').value; $('#loginPass').value = $('#regPass').value; } catch(e){ toast(e.message,'err') } };
+
+    // user view
+    $('#refreshUser').onclick = ()=>{ refreshSessionUser(); renderUserHeader(); renderRecipients(); renderUserHistory('all'); toast('Обновлено','ok') };
+    $('#deleteMe').onclick = ()=>{ modal.open({ title:'Удалить аккаунт?', okText:'Удалить', okClass:'red', bodyHTML:`<div class="muted">Действие необратимо. Баланс и история останутся в системе, но аккаунт деактивируется.</div>`, onOk:()=>{ const me=current(); removeAccount(me.username); toast('Аккаунт удалён','warn'); logout(); } }); };
+    document.querySelectorAll('[data-filter]').forEach(b=> b.onclick = ()=>{ renderUserHistory(b.getAttribute('data-filter')) });
+    
+    // Change password
+    $('#changePassword').onclick = ()=>{
+      modal.open({
+        title:'Сменить пароль',
+        okText:'Изменить',
+        okClass:'green',
+        bodyHTML:`
+          <label>Старый пароль</label><input id="oldPass" class="input" type="password" placeholder="Текущий пароль" />
+          <label>Новый пароль</label><input id="newPass" class="input" type="password" placeholder="Новый пароль" />
+          <label>Повторите новый пароль</label><input id="confirmPass" class="input" type="password" placeholder="Повторите новый пароль" />
+        `,
+        onOk:()=>{
+          const me=current();
+          const oldPass=$('#oldPass').value;
+          const newPass=$('#newPass').value;
+          const confirmPass=$('#confirmPass').value;
+          
+          if(!oldPass || !newPass || !confirmPass) {
+            toast('Заполните все поля','err');
+            return;
+          }
+          
+          const users=getUsers();
+          const user=users.find(u=>u.username===me.username);
+          
+          if(!user || user.password !== oldPass) {
+            toast('Неверный старый пароль','err');
+            return;
+          }
+          
+          if(newPass !== confirmPass) {
+            toast('Новые пароли не совпадают','err');
+            return;
+          }
+          
+          if(newPass.length < 3) {
+            toast('Пароль должен быть минимум 3 символа','err');
+            return;
+          }
+          
+          user.password = newPass;
+          const userIndex = users.findIndex(u=>u.username===me.username);
+          users[userIndex] = user;
+          setUsers(users);
+          setCurrent(user);
+          
+          toast('Пароль успешно изменён','ok');
+        }
+      });
+    };
+
+    // --- Self-test: swipe teardown must not throw ---
+    try{
+      const tmp = document.createElement('div');
+      tmp.innerHTML = `<div class="swipe-wrap"><div class="swipe-track"><div class="swipe-label">test</div><div class="swipe-knob">➜</div></div></div>`;
+      const destroy = initSwipe(tmp, ()=>{});
+      destroy(); // if our guards are correct — это не упадёт
+    }catch(err){ console.error('Self-test swipe failed', err); }
+  }
+
+  function init(){
+    seed();
+    wire();
+    
+    // Try Telegram auto-login first
+    if (tgUser && !current()) {
+      if (tryTelegramAutoLogin()) {
+        return;
+      }
+    }
+    
+    const me = current();
+    if(me){
+      const fresh = findUser(me.username);
+      if(fresh && !fresh.deleted){
+        markOnline(fresh.username, true);
+        setCurrent(fresh);
+        if(fresh.isAdmin) showAdmin();
+        else showUser();
+      } else{
+        showAuth();
+      }
+    } else{
+      showAuth()
+    }
+  }
+  init();
+  </script>
+</body>
+</html>

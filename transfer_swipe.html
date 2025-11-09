@@ -1,0 +1,523 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Свайп-перевод (MSBank)</title>
+    <style>
+        :root {
+            --bg: #0e1118;
+            --panel: #111827;
+            --panel-2: #0b1220;
+            --text: #ecf2ff;
+            --muted: #97a3b6;
+            --accent: #3b82f6;
+            --accent-2: #60a5fa;
+            --good: #22c55e;
+            --danger: #ef4444;
+            --stroke: rgba(255,255,255,.06);
+            --radius: 18px;
+            --shadow: 0 24px 60px rgba(0,0,0,.45),0 8px 20px rgba(0,0,0,.35);
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html, body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif;
+            color: var(--text);
+            background: radial-gradient(80vw 80vh at 10% -10%, #1a2030 0%, transparent 60%), radial-gradient(80vw 80vh at 110% 10%, #0d1424 0%, transparent 60%), var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .panel {
+            width: min(520px, 94vw);
+            background: linear-gradient(180deg,#111827,#0c1424);
+            border: 1px solid var(--stroke);
+            border-radius: 30px;
+            box-shadow: var(--shadow);
+            padding: 22px 22px 26px;
+        }
+
+        .bar {
+            height: 6px;
+            width: 80px;
+            margin: 2px auto 12px;
+            border-radius: 999px;
+            background: #2a3346;
+            opacity: .85
+        }
+
+        h1 {
+            margin: 6px 6px 14px;
+            font-size: 20px;
+            letter-spacing: .2px
+        }
+
+        .card {
+            background: linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+            border: 1px solid var(--stroke);
+            border-radius: 22px;
+            padding: 14px;
+        }
+
+        .badge {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            font-size: 12px;
+            color: var(--muted);
+            background: #0b1020;
+            border: 1px solid #203049;
+            padding: 6px 10px;
+            border-radius: 999px;
+            margin-bottom: 12px
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--good);
+            box-shadow: 0 0 0 4px rgba(34,197,94,.16)
+        }
+
+        .balance {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0b1020;
+            border: 1px solid #203049;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: var(--muted)
+        }
+
+            .balance b {
+                color: var(--text);
+                font-size: 15px
+            }
+
+        label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin: 8px 0 6px
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #0b1020;
+            border: 1px solid #203049;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.02)
+        }
+
+            input:focus, select:focus {
+                border-color: #2b3950;
+                box-shadow: 0 0 0 3px rgba(59,130,246,.15)
+            }
+
+        .spacer {
+            height: 12px
+        }
+
+        /* SLIDER */
+        .slider {
+            position: relative;
+            height: 60px;
+            border-radius: 999px;
+            background: #0b1020;
+            border: 1px solid #203049;
+            overflow: hidden;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .track {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg,rgba(59,130,246,.08),rgba(59,130,246,.02));
+            pointer-events: none
+        }
+
+        .hint {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%,-50%);
+            font-size: 14px;
+            color: var(--muted);
+            letter-spacing: .2px;
+            pointer-events: none;
+            transition: opacity .15s ease;
+            white-space: nowrap;
+        }
+
+        .thumb {
+            position: absolute;
+            left: 8px;
+            top: 6px;
+            height: 48px;
+            width: 148px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #061022;
+            background: linear-gradient(180deg,var(--accent),var(--accent-2));
+            box-shadow: 0 14px 28px rgba(59,130,246,.35),inset 0 -4px 8px rgba(0,0,0,.22);
+            cursor: grab;
+            touch-action: none;
+            transition: filter .2s ease, background .2s ease;
+            transform: translateX(0);
+        }
+
+            .thumb:active {
+                cursor: grabbing
+            }
+
+            .thumb.sending {
+                pointer-events: none;
+                filter: saturate(.9) brightness(.93)
+            }
+
+        @keyframes shakeX {
+            10%,90% {
+                transform: translateX(-1px)
+            }
+
+            20%,80% {
+                transform: translateX(2px)
+            }
+
+            30%,50%,70% {
+                transform: translateX(-4px)
+            }
+
+            40%,60% {
+                transform: translateX(4px)
+            }
+        }
+
+        .shake {
+            animation: shakeX .35s ease both
+        }
+
+        /* MODAL */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            backdrop-filter: blur(6px) saturate(120%)
+        }
+
+            .overlay.show {
+                display: flex
+            }
+
+        .modal {
+            width: min(460px,92vw);
+            background: linear-gradient(180deg,#0d1320,#0b0f19);
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 24px;
+            padding: 22px;
+            box-shadow: var(--shadow);
+            text-align: center
+        }
+
+        .check {
+            width: 84px;
+            height: 84px;
+            margin: 0 auto 14px;
+            display: block
+        }
+
+            .check circle {
+                stroke: var(--good);
+                stroke-width: 6;
+                fill: none;
+                opacity: .35
+            }
+
+            .check path {
+                stroke: var(--good);
+                stroke-width: 6;
+                fill: none;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+                stroke-dasharray: 72;
+                stroke-dashoffset: 72;
+                animation: draw .7s ease .15s forwards
+            }
+
+        @keyframes draw {
+            to {
+                stroke-dashoffset: 0
+            }
+        }
+
+        .ok {
+            margin-top: 10px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            background: linear-gradient(180deg,var(--accent),var(--accent-2));
+            color: #071021;
+            border: none;
+            box-shadow: 0 8px 18px rgba(59,130,246,.35);
+            cursor: pointer
+        }
+
+        .note {
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 6px
+        }
+    </style>
+</head>
+<body>
+    <div class="panel" role="application" aria-label="Экран перевода">
+        <div class="bar"></div>
+        <h1>Перевод</h1>
+
+        <div class="card">
+            <div class="badge"><span class="dot"></span> Безопасное соединение</div>
+
+            <div class="balance">
+                <span>Баланс</span>
+                <b id="balanceText">₽ 14 999</b>
+            </div>
+
+            <div class="row">
+                <div>
+                    <label for="amount">Сумма</label>
+                    <input id="amount" type="number" min="1" step="1" placeholder="Напр., 1000" inputmode="numeric" />
+                </div>
+                <div>
+                    <label for="to">Получатель</label>
+                    <select id="to"></select>
+                </div>
+            </div>
+
+            <div class="spacer"></div>
+
+            <div class="slider" id="slider" aria-label="Свайпните для перевода" role="button" tabindex="0">
+                <div class="track"></div>
+                <div class="hint" id="hint">Проведи, чтобы отправить</div>
+                <div class="thumb" id="thumb">Свайп →</div>
+            </div>
+            <div aria-live="polite" id="live" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden"></div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="overlay" id="overlay" aria-modal="true" role="dialog" aria-label="Статус перевода">
+        <div class="modal">
+            <svg class="check" viewBox="0 0 64 64" aria-hidden="true">
+                <circle cx="32" cy="32" r="26"></circle>
+                <path d="M18 34 L28 44 L46 22"></path>
+            </svg>
+            <h2 style="margin:0 0 6px; font-size:20px">Перевод выполнен</h2>
+            <div id="resultText" class="note">Отправлено</div>
+            <button class="ok" id="okBtn">Ок</button>
+        </div>
+    </div>
+
+    <script>
+        /* ===== загрузка данных (гибкая) =====
+          Варианты:
+          1) До скрипта положи:
+             window.MSBANK_INIT = { balance: 14999, recipients: ["Max (АДМИН)","Alice","Bob"] };
+          2) localStorage.setItem('msbank_state', JSON.stringify({balance: 14999, recipients: ["Max (АДМИН)","Alice"]}))
+          3) Бэкэнд: GET /api/state -> {balance:number, recipients:string[]}
+        */
+
+        const balanceEl = document.getElementById('balanceText');
+        const toSel = document.getElementById('to');
+        const amountEl = document.getElementById('amount');
+        const hint = document.getElementById('hint');
+        const thumb = document.getElementById('thumb');
+        const slider = document.getElementById('slider');
+        const overlay = document.getElementById('overlay');
+        const okBtn = document.getElementById('okBtn');
+        const resTxt = document.getElementById('resultText');
+        const live = document.getElementById('live');
+
+        let balance = 14999; // дефолт
+        let dragging = false, startX = 0, startTranslate = 0, currentX = 0;
+
+        // — форматтер
+        const fmt = n => new Intl.NumberFormat('ru-RU').format(n);
+
+        // — лимиты для слайдера
+        function maxTranslate() {
+            return slider.clientWidth - thumb.clientWidth - 16;
+        }
+        function setThumbTranslate(px) {
+            const clamped = Math.max(0, Math.min(px, maxTranslate()));
+            currentX = clamped;
+            thumb.style.transform = `translateX(${clamped}px)`;
+            const t = maxTranslate() > 0 ? clamped / maxTranslate() : 0;
+            hint.style.opacity = Math.max(0, 1 - t * 1.25).toFixed(2);
+        }
+        function resetThumb() {
+            thumb.classList.remove('sending');
+            thumb.style.background = 'linear-gradient(180deg, var(--accent), var(--accent-2))';
+            hint.style.opacity = 1;
+            thumb.style.transform = 'translateX(0)';
+            currentX = 0;
+            dragging = false;
+        }
+        function bounceAndBack() {
+            thumb.classList.add('shake');
+            setTimeout(() => thumb.classList.remove('shake'), 360);
+            // плавный откат назад
+            setTimeout(() => resetThumb(), 360);
+        }
+        function insufficient() {
+            thumb.style.background = 'linear-gradient(180deg, var(--danger), #ff6b6b)';
+            bounceAndBack();
+            live.textContent = 'Недостаточно средств для перевода';
+        }
+        function successSend(value, to) {
+            thumb.classList.add('sending');
+            setTimeout(() => {
+                overlay.classList.add('show');
+                resTxt.textContent = `Отправлено ₽ ${fmt(value)} → ${to}`;
+                balance -= value;
+                balanceEl.textContent = '₽ ' + fmt(balance);
+                live.textContent = 'Перевод выполнен';
+            }, 280);
+        }
+        function trySend() {
+            const value = Math.max(0, Math.floor(Number(amountEl.value || 0)));
+            const to = toSel.value || 'Получатель';
+            if (!value) { bounceAndBack(); return; }
+            if (value > balance) { insufficient(); return; }
+            successSend(value, to);
+        }
+
+        // — события pointer/touch
+        function onDown(e) {
+            dragging = true;
+            startX = (e.touches ? e.touches[0].clientX : e.clientX);
+            startTranslate = currentX;
+            thumb.style.cursor = 'grabbing';
+            e.preventDefault();
+        }
+        function onMove(e) {
+            if (!dragging) return;
+            const x = (e.touches ? e.touches[0].clientX : e.clientX);
+            const deltaX = x - startX;
+            setThumbTranslate(startTranslate + deltaX);
+            e.preventDefault();
+        }
+        function onUp() {
+            if (!dragging) return;
+            dragging = false;
+            thumb.style.cursor = 'grab';
+            const ratio = maxTranslate() > 0 ? currentX / maxTranslate() : 0;
+            if (ratio > 0.92) {
+                trySend();
+            } else {
+                resetThumb();
+            }
+        }
+
+        thumb.addEventListener('mousedown', onDown);
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+
+        thumb.addEventListener('touchstart', onDown, { passive: false });
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onUp);
+
+        // Доступность: Enter / Space = отправка
+        slider.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.code === 'Space') {
+                e.preventDefault();
+                setThumbTranslate(maxTranslate());
+                trySend();
+            }
+        });
+
+        // Модалка
+        okBtn.addEventListener('click', () => {
+            overlay.classList.remove('show');
+            resetThumb();
+            amountEl.value = '';
+        });
+
+        // Пересчёт позиционирования при ресайзе/смене шрифтов
+        new ResizeObserver(() => resetThumb()).observe(slider);
+        window.addEventListener('load', resetThumb);
+
+        /* ===== гидратор данных ===== */
+        async function loadState() {
+            // 1) window.MSBANK_INIT
+            if (window.MSBANK_INIT) return window.MSBANK_INIT;
+
+            // 2) localStorage
+            try {
+                const st = JSON.parse(localStorage.getItem('msbank_state') || 'null');
+                if (st) return st;
+            } catch (e) { }
+
+            // 3) бэкэнд
+            try {
+                const r = await fetch('/api/state', { headers: { 'accept': 'application/json' } });
+                if (r.ok) return await r.json();
+            } catch (e) { }
+
+            // дефолт
+            return { balance: 14999, recipients: ["Max (АДМИН)", "Alice", "Bob"] };
+        }
+
+        function hydrate(data) {
+            balance = Number(data.balance ?? balance) || balance;
+            balanceEl.textContent = '₽ ' + fmt(balance);
+
+            const recips = Array.isArray(data.recipients) && data.recipients.length
+                ? data.recipients
+                : ["Max (АДМИН)", "Alice", "Bob"];
+
+            toSel.innerHTML = '';
+            for (const name of recips) {
+                const opt = document.createElement('option');
+                opt.value = name; opt.textContent = name;
+                toSel.appendChild(opt);
+            }
+        }
+
+        // старт
+        loadState().then(hydrate);
+    </script>
+</body>
+</html>
